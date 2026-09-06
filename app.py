@@ -211,9 +211,12 @@ def enviar_email_banca(pdf_path, cliente_nome):
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     
-    # IMPORTANTE: Insira aqui o e-mail remetente e a Senha de App gerada na sua conta Google
-    remetente = "seu_email_envio@gmail.com"
-    senha_app = "sua_senha_de_app_aqui"
+    # ====================================================
+    # COLOQUE SEU E-MAIL DO GMAIL E A SENHA DE APP AQUI:
+    remetente = "SEU_EMAIL_AQUI@gmail.com"
+    senha_app = "SUA_SENHA_DE_16_DIGITOS"
+    # ====================================================
+    
     destinatario = "andreiabolzanmenezes@gmail.com"
     
     try:
