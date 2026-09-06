@@ -123,29 +123,41 @@ with st.sidebar:
             if not nome or not endereco:
                 st.error("Preencha Nome e Endereço para gerar o PDF!")
             else:
-                # Criação do PDF com design elegante
+                # Criação do PDF com design elegante e espaçamento de logo corrigido
                 class PDF(FPDF):
                     def header(self):
-                        # Tenta adicionar o logotipo se ele existir no repositório
-                        if os.path.exists("logo.png"):
-                            self.image("logo.png", 10, 10, 30)
-                            self.set_xy(45, 10)
+                        has_logo = os.path.exists("logo.png")
+                        
+                        if has_logo:
+                            # Posiciona o logotipo à esquerda com tamanho proporcional controlado
+                            self.image("logo.png", 10, 10, 25)
+                            # Desloca o texto para a direita para não bater na imagem
+                            self.set_xy(38, 12)
+                        else:
+                            self.set_xy(10, 12)
                         
                         # Cabeçalho da Empresa
-                        self.set_font("Arial", "B", 15)
+                        self.set_font("Arial", "B", 14)
                         self.set_text_color(30, 61, 47) # Verde escuro elegante
-                        self.cell(0, 7, "BANCA DO MANÉ", 0, 1, "L" if os.path.exists("logo.png") else "C")
+                        self.cell(0, 6, "BANCA DO MANÉ", 0, 1, "L" if has_logo else "C")
                         
-                        self.set_font("Arial", "", 9)
+                        if has_logo:
+                            self.set_x(38)
+                        self.set_font("Arial", "", 8)
                         self.set_text_color(100, 100, 100)
-                        self.cell(0, 5, "Frutas, Verduras e Legumes - Mercado Municipal (Box 43 a 48)", 0, 1, "L" if os.path.exists("logo.png") else "C")
-                        self.cell(0, 5, "Poços de Caldas - MG | Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "L" if os.path.exists("logo.png") else "C")
+                        self.cell(0, 4, "Frutas, Verduras e Legumes - Mercado Municipal (Box 43 a 48)", 0, 1, "L" if has_logo else "C")
                         
-                        self.ln(5)
+                        if has_logo:
+                            self.set_x(38)
+                        self.cell(0, 4, "Poços de Caldas - MG | Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "L" if has_logo else "C")
+                        
+                        # Garante que o cursor desça abaixo do logotipo antes de traçar a linha
+                        self.set_y(max(self.get_y(), 32))
+                        self.ln(2)
                         self.set_draw_color(30, 61, 47)
                         self.set_line_width(0.8)
                         self.line(10, self.get_y(), 200, self.get_y())
-                        self.ln(5)
+                        self.ln(6)
 
                     def footer(self):
                         self.set_y(-15)
@@ -158,31 +170,31 @@ with st.sidebar:
                 pdf.set_auto_page_break(auto=True, margin=15)
                 
                 # Título do Documento
-                pdf.set_font("Arial", "B", 12)
+                pdf.set_font("Arial", "B", 11)
                 pdf.set_text_color(50, 50, 50)
-                pdf.cell(0, 8, "COMPROVANTE DE SOLICITAÇÃO DE PEDIDO", 0, 1, "L")
+                pdf.cell(0, 7, "COMPROVANTE DE SOLICITAÇÃO DE PEDIDO", 0, 1, "L")
                 pdf.ln(2)
 
                 # Bloco de Dados do Cliente (Caixa cinza clara elegante)
                 pdf.set_fill_color(245, 247, 246)
-                pdf.set_font("Arial", "B", 10)
+                pdf.set_font("Arial", "B", 9)
                 pdf.cell(0, 6, "  DADOS DO CLIENTE PARA ENTREGA:", 0, 1, "L", fill=True)
                 
-                pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 6, f"  Nome: {nome}", 0, 1, "L", fill=True)
-                pdf.cell(0, 6, f"  Endereço: {endereco}", 0, 1, "L", fill=True)
-                pdf.cell(0, 6, f"  Telefone: {telefone}", 0, 1, "L", fill=True)
+                pdf.set_font("Arial", "", 9)
+                pdf.cell(0, 5, f"  Nome: {nome}", 0, 1, "L", fill=True)
+                pdf.cell(0, 5, f"  Endereço: {endereco}", 0, 1, "L", fill=True)
+                pdf.cell(0, 5, f"  Telefone: {telefone}", 0, 1, "L", fill=True)
                 pdf.ln(6)
 
                 # Tabela de Itens (Cabeçalho)
                 pdf.set_fill_color(30, 61, 47)
                 pdf.set_text_color(255, 255, 255)
-                pdf.set_font("Arial", "B", 10)
-                pdf.cell(130, 8, "  Produto", 1, 0, "L", fill=True)
-                pdf.cell(60, 8, "Quantidade", 1, 1, "C", fill=True)
+                pdf.set_font("Arial", "B", 9)
+                pdf.cell(130, 7, "  Produto", 1, 0, "L", fill=True)
+                pdf.cell(60, 7, "Quantidade", 1, 1, "C", fill=True)
 
                 # Itens da Tabela
-                pdf.set_font("Arial", "", 10)
+                pdf.set_font("Arial", "", 9)
                 pdf.set_text_color(50, 50, 50)
                 
                 fill_toggle = False
@@ -192,11 +204,11 @@ with st.sidebar:
                     else:
                         pdf.set_fill_color(255, 255, 255)
                     
-                    pdf.cell(130, 7, f"  {p}", 1, 0, "L", fill=True)
-                    pdf.cell(60, 7, f"{q}", 1, 1, "C", fill=True)
+                    pdf.cell(130, 6, f"  {p}", 1, 0, "L", fill=True)
+                    pdf.cell(60, 6, f"{q}", 1, 1, "C", fill=True)
                     fill_toggle = not fill_toggle
 
-                pdf.ln(15)
+                pdf.ln(10)
                 
                 # Assinatura / Rodapé do Pedido
                 pdf.set_font("Arial", "I", 9)
