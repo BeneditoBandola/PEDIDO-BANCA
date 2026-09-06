@@ -57,7 +57,7 @@ if "cliente_end" not in st.session_state:
 if "cliente_tel" not in st.session_state:
     st.session_state.cliente_tel = ""
 if "etapa" not in st.session_state:
-    st.session_state.etapa = "pedido" # "pedido" ou "revisao"
+    st.session_state.etapa = "pedido"
 
 # --- TELA 2: TELA DE REVISÃO E CONFIRMAÇÃO DO PEDIDO ---
 if st.session_state.etapa == "revisao":
@@ -96,14 +96,13 @@ if st.session_state.etapa == "revisao":
             st.rerun()
             
     with col_b:
-        # Botão para Enviar via WhatsApp direto
         st.markdown(
             f'<a href="{link_wpp}" target="_blank" style="background-color: #25D366; color: white; padding: 9px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; display: block; text-align: center; font-size: 0.9rem;">📲 Enviar WhatsApp</a>',
             unsafe_allow_html=True
         )
         
     with col_c:
-        # Geração do PDF Comercial Oficial
+        # Geração do PDF Comercial Oficial com Logotipo e Mascote
         class PDF(FPDF):
             def header(self):
                 has_logo = os.path.exists("logo.png")
@@ -135,14 +134,21 @@ if st.session_state.etapa == "revisao":
                 self.ln(6)
 
             def footer(self):
-                self.set_y(-15)
+                self.set_y(-25)
+                # Adiciona a imagem do mascote no rodapé se o arquivo 'mascote.png' estiver no GitHub
+                if os.path.exists("mascote.png"):
+                    try:
+                        self.image("mascote.png", 175, self.get_y(), 22)
+                    except:
+                        pass
+                
                 self.set_font("Arial", "I", 8)
                 self.set_text_color(150, 150, 150)
                 self.cell(0, 10, f"Comprovante de Pedido gerado digitalmente - Página {self.page_no()}", 0, 0, "C")
 
         pdf = PDF()
         pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_auto_page_break(auto=True, margin=20)
         
         pdf.set_font("Arial", "B", 11)
         pdf.set_text_color(50, 50, 50)
