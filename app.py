@@ -58,16 +58,19 @@ catalogo = {
     ]
 }
 
-# Inicializar carrinho na sessão do Streamlit
+# Inicializar estado da sessão
 if "carrinho" not in st.session_state:
     st.session_state.carrinho = {}
 
-# Layout principal em abas para não ficar maçante
+if "pedido_gerado" not in st.session_state:
+    st.session_state.pedido_gerado = ""
+
+# Layout principal em abas
 aba_pedido, aba_busca = st.tabs(["🛒 Fazer Pedido por Categoria", "🔍 Busca Rápida de Produtos"])
 
 with aba_busca:
     st.subheader("Busque o produto desejado:")
-    termo_busca = st.text_input("Digite o nome da fruta, legume ou verdura (ex: tomate, banana...):", "").upper()
+    termo_busca = st.text_input("Digite o nome da fruta, legume ou verdura:", "").upper()
     
     if termo_busca:
         encontrados = []
@@ -95,10 +98,7 @@ with aba_pedido:
     
     st.divider()
     
-    # Exibição organizada em colunas para facilitar o clique/preenchimento rápido
     produtos_da_categoria = catalogo[categoria_selecionada]
-    
-    # Criando grid dinâmico
     cols_por_linha = 2
     linhas = [produtos_da_categoria[i:i + cols_por_linha] for i in range(0, len(produtos_da_categoria), cols_por_linha)]
     
@@ -118,7 +118,7 @@ with aba_pedido:
                 elif produto in st.session_state.carrinho and not quantidade.strip():
                     del st.session_state.carrinho[produto]
 
-# --- BARRA LATERAL: RESUMO DO PEDIDO E FINALIZAÇÃO ---
+# --- BARRA LATERAL: CARRINHO E FINALIZAÇÃO ---
 with st.sidebar:
     st.header("📋 Seu Carrinho")
     
@@ -136,6 +136,7 @@ with st.sidebar:
                 
         if st.button("🗑️ Limpar Carrinho"):
             st.session_state.carrinho = {}
+            st.session_state.pedido_gerado = ""
             st.rerun()
             
         st.divider()
@@ -144,11 +145,12 @@ with st.sidebar:
         endereco_cliente = st.text_input("Endereço / Bairro:")
         telefone_cliente = st.text_input("Telefone de Contato:")
         
-        if st.button("📤 Enviar Pedido via WhatsApp", type="primary"):
+        # Botão principal para consolidar o pedido
+        if st.button("📦 Fechar Pedido", type="primary"):
             if not nome_cliente or not endereco_cliente:
                 st.error("Por favor, preencha seu Nome e Endereço!")
             else:
-                # Monta a mensagem formatada para o WhatsApp da Banca
+                # Monta o texto limpo para o cliente copiar
                 msg = f"*NOVO PEDIDO - BANCA DO MANÉ*\n\n"
                 msg += f"👤 *Cliente:* {nome_cliente}\n"
                 msg += f"📍 *Endereço:* {endereco_cliente}\n"
@@ -157,11 +159,23 @@ with st.sidebar:
                 for p, q in st.session_state.carrinho.items():
                     msg += f"- {p}: {q}\n"
                 
-                import urllib.parse
-                msg_encoded = urllib.parse.quote(msg)
-                # Número da Banca do Mané extraído do talão: (35) 9 9846-4384
-                whatsapp_url = f"https://wa.me/5535998464384?text={msg_encoded}"
-                
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={whatsapp_url}">', unsafe_allow_html=True)
-                st.success("Pedido pronto! Redirecionando para o WhatsApp...")
-                st.markdown(f"[Clique aqui se não abrir automaticamente]({whatsapp_url})", unsafe_allow_html=True)
+                st.session_state.pedido_gerado = msg
+                st.success("Pedido gerado com sucesso!")
+
+        # Se o pedido já foi gerado, mostra a caixa de texto com o botão de ir para o WhatsApp
+        if st.session_state.pedido_gerado:
+            st.markdown("---")
+            st.markdown("### 📲 Enviar para a Banca")
+            st.text_area("Copie o texto abaixo se necessário:", value=st.session_state.pedido_gerado, height=150)
+            
+            import urllib.parse
+            msg_encoded = urllib.parse.quote(st.session_state.pedido_gerado)
+            # Número da Banca do Mané: (35) 9 9846-4384
+            whatsapp_url = f"https://wa.me/5535998464384?text={msg_encoded}"
+            
+            st.markdown(
+                f'<div style="text-align: center; margin-top: 10px;">'
+                f'<a href="{whatsapp_url}" target="_blank" style="background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: block;">Abrir WhatsApp com o Pedido 🚀</a>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
