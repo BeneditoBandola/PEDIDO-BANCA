@@ -7,29 +7,50 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilo visual limpo e amigável
+# Estilização para fundo claro, fontes maiores e boa legibilidade
 st.markdown("""
     <style>
+    /* Força o fundo geral claro e limpo */
+    .stApp {
+        background-color: #fcfcfc;
+        color: #2b2b2b;
+    }
+    
+    /* Cabeçalhos maiores e destacados */
     .main-header {
-        font-size: 2.2rem;
-        color: #2c3e50;
+        font-size: 2.5rem;
+        color: #1e3d2f;
         text-align: center;
         font-weight: bold;
+        margin-bottom: 0px;
     }
     .sub-header {
         text-align: center;
-        color: #7f8c8d;
+        color: #555555;
+        font-size: 1.1rem;
         margin-bottom: 2rem;
+    }
+    
+    /* Aumenta o tamanho dos rótulos (nomes dos produtos) e caixas de texto para facilitar a leitura */
+    .stTextInput label {
+        font-size: 1.15rem !important;
+        font-weight: 600 !important;
+        color: #2c3e50 !important;
+    }
+    
+    /* Melhora o destaque dos inputs */
+    input {
+        font-size: 1.1rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<p class="main-header">🍌 Banca do Mané 🍅</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-header">Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG 📦 Entrega em Domicílio</p>', unsafe_allow_html=True)
 
 # Dicionário estruturado com todos os produtos do talão
 catalogo = {
-    "🍎 Frutas": [
+    "🍎 Frutas Frescas": [
         "ABACATE", "ABACAXI HAVAÍ", "ABACAXI PÉROLA", "AMEIXA AMARELA", "AMEIXA VERM.", 
         "ATEMÓIA", "PITAYA", "BANANA NANICA", "BANANA PRATA", "CAQUI", "CARAMBOLA", 
         "FIGO", "GOIABA", "LARANJA BAIANA", "LARANJA LIMA", "LARANJA PERA", "LIMA DA PÉRSIA", 
@@ -69,7 +90,7 @@ if "pedido_gerado" not in st.session_state:
 aba_pedido, aba_busca = st.tabs(["🛒 Fazer Pedido por Categoria", "🔍 Busca Rápida de Produtos"])
 
 with aba_busca:
-    st.subheader("Busque o produto desejado:")
+    st.subheader("🔍 Busque o produto desejado:")
     termo_busca = st.text_input("Digite o nome da fruta, legume ou verdura:", "").upper()
     
     if termo_busca:
@@ -86,15 +107,15 @@ with aba_busca:
                 with cols[0]:
                     st.write(f"**{prod}** *({categoria})*")
                 with cols[1]:
-                    qtd = st.text_input(f"Qtd/Peso p/ {prod}", key=f"busca_{prod}", placeholder="ex: 1kg, 2 bandeijas")
+                    qtd = st.text_input(f"Quantidade para {prod}", key=f"busca_{prod}", placeholder="ex: 1kg, 2 bandeijas")
                     if qtd:
                         st.session_state.carrinho[prod] = qtd
         else:
             st.warning("Nenhum produto encontrado com esse nome.")
 
 with aba_pedido:
-    st.markdown("Selecione a categoria abaixo para adicionar os itens:")
-    categoria_selecionada = st.radio("Categoria:", list(catalogo.keys()), horizontal=True)
+    st.markdown("### Selecione a categoria e digite a quantidade desejada:")
+    categoria_selecionada = st.radio("Escolha o setor:", list(catalogo.keys()), horizontal=True)
     
     st.divider()
     
@@ -108,9 +129,9 @@ with aba_pedido:
             with cols[idx]:
                 valor_atual = st.session_state.carrinho.get(produto, "")
                 quantidade = st.text_input(
-                    label=produto,
+                    label=f"📦 {produto}",
                     value=valor_atual,
-                    placeholder="Ex: 1kg, 6 unidades, 1 maço",
+                    placeholder="Ex: 1kg, 6 un, 1 maço",
                     key=f"cat_{produto}"
                 )
                 if quantidade.strip():
@@ -140,17 +161,15 @@ with st.sidebar:
             st.rerun()
             
         st.divider()
-        st.subheader("Dados para Entrega")
+        st.subheader("📍 Dados para Entrega")
         nome_cliente = st.text_input("Seu Nome:")
         endereco_cliente = st.text_input("Endereço / Bairro:")
         telefone_cliente = st.text_input("Telefone de Contato:")
         
-        # Botão principal para consolidar o pedido
         if st.button("📦 Fechar Pedido", type="primary"):
             if not nome_cliente or not endereco_cliente:
                 st.error("Por favor, preencha seu Nome e Endereço!")
             else:
-                # Monta o texto limpo para o cliente copiar
                 msg = f"*NOVO PEDIDO - BANCA DO MANÉ*\n\n"
                 msg += f"👤 *Cliente:* {nome_cliente}\n"
                 msg += f"📍 *Endereço:* {endereco_cliente}\n"
@@ -162,11 +181,10 @@ with st.sidebar:
                 st.session_state.pedido_gerado = msg
                 st.success("Pedido gerado com sucesso!")
 
-        # Se o pedido já foi gerado, mostra a caixa de texto com o botão de ir para o WhatsApp
         if st.session_state.pedido_gerado:
             st.markdown("---")
             st.markdown("### 📲 Enviar para a Banca")
-            st.text_area("Copie o texto abaixo se necessário:", value=st.session_state.pedido_gerado, height=150)
+            st.text_area("Confira o texto abaixo:", value=st.session_state.pedido_gerado, height=150)
             
             import urllib.parse
             msg_encoded = urllib.parse.quote(st.session_state.pedido_gerado)
@@ -175,7 +193,7 @@ with st.sidebar:
             
             st.markdown(
                 f'<div style="text-align: center; margin-top: 10px;">'
-                f'<a href="{whatsapp_url}" target="_blank" style="background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: block;">Abrir WhatsApp com o Pedido 🚀</a>'
+                f'<a href="{whatsapp_url}" target="_blank" style="background-color: #25D366; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: block; font-size: 1.1rem;">Abrir WhatsApp com o Pedido 🚀</a>'
                 f'</div>',
                 unsafe_allow_html=True
             )
