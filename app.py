@@ -4,6 +4,7 @@ from fpdf import FPDF
 import tempfile
 import os
 import urllib.parse
+from datetime import datetime
 
 st.set_page_config(
     page_title="Banca do Mané - Fazer Pedido",
@@ -16,8 +17,8 @@ st.markdown("<h1 style='text-align: center; color: #1e3d2f;'>🍌 Banca do Mané
 st.markdown("<p style='text-align: center; color: #555;'>Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Opções padronizadas
-op_gramas = ["100g", "200g", "300g", "400g", "500g", "600g", "700g", "800g", "900g", "1 Quilo"]
+# Opções padronizadas de gramas limpas
+op_gramas_limpas = ["100 gramas", "200 gramas", "300 gramas", "400 gramas", "500 gramas", "600 gramas", "700 gramas", "800 gramas", "900 gramas", "1 Quilo"]
 
 # Catálogo reestruturado
 catalogo = {
@@ -28,12 +29,12 @@ catalogo = {
         ("🍑 AMEIXA AMARELA", ["Mais verde", "Mais maduro", "Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍑 AMEIXA VERMELHA", ["Mais verde", "Mais maduro", "Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍈 ATEMÓIA", ["Mais verde", "Mais maduro", "Quilo", "Meio Quilo (500g)", "Unidade"]),
-        ("🐉 PITAYA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
+        ("🌵 PITAYA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍌 BANANA NANICA", ["Unidade", "Penca"]),
         ("🍌 BANANA PRATA", ["Unidade", "Penca"]),
         ("🥭 CAQUI", ["Bandeja", "Unidade"]),
         ("⭐ CARAMBOLA", ["Bandeja"]),
-        (" figs FIGO", ["Bandeja"]),
+        ("FIGO", ["Bandeja"]), 
         ("🍐 GOIABA", ["Mais verde", "Mais maduro", "Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍊 LARANJA BAIANA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍊 LARANJA LIMA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
@@ -44,7 +45,7 @@ catalogo = {
         ("🍋 LIMÃO TAITI", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍏 MAÇÃ ARGENTINA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍎 MAÇÃ NAC. FUJI", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
-        ("🍎 MAÇÃ NAC. GALA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
+        ("🍎 MAÇÃ NACIONAL GALA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍏 MAÇÃ VERDE", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍈 MAMÃO PAPAYA", ["Mais verde", "Mais maduro", "Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍈 MAMÃO FORMOSA", ["Mais verde", "Mais maduro", "Quilo", "Meio Quilo (500g)", "Unidade"]),
@@ -52,6 +53,7 @@ catalogo = {
         ("🥭 MANGA TOMMY", ["Mais verde", "Mais maduro", "Unidade"]),
         ("🟣 MARACUJÁ", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍉 MELANCIA", ["Inteira", "Meia", "Um Quarto"]),
+        ("🍉 MELANCIA BABY", ["Unidade"]),
         ("🍈 MELÃO", ["Unidade"]),
         ("🍊 MEXERICA CRAVO", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍊 MEXERICA MURGOTE", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
@@ -111,7 +113,7 @@ catalogo = {
     ],
     "🥔 Legumes e Tubérculos": [
         ("🧄 ALHO", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
-        ("🎃 ABÓBORA MADURA", ["1 dedo", "2 dedos", "3 dedos", "Quilo", "Meio Quilo (500g)"]),
+        ("🎃 ABÓBORA MADURA", ["2 dedos", "3 dedos", "Quilo", "Meio Quilo (500g)"]),
         ("🥒 ABOBRINHA CAIPIRA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🥒 ABOBRINHA ITÁLIA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍠 BATATA DOCE", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
@@ -143,13 +145,13 @@ catalogo = {
         ("🫑 PIMENTÃO VERMELHO", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🥒 PEPINO COMUM", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🥒 PEPINO JAPONÊS", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
-        ("🟢 QUIABO", op_gramas),
-        ("🍅 TOMATE CEREJA", op_gramas),
+        ("🟢 QUIABO", op_gramas_limpas),
+        ("🍅 TOMATE CEREJA", op_gramas_limpas),
         ("🍅 TOMATE MOLHO", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍅 TOMATE SALADA", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
         ("🍅 TOMATE HOLANDÊS", ["Quilo", "Meio Quilo (500g)", "Unidade"]),
-        ("🍅 TOMATE COQUETEL", op_gramas),
-        ("🫛 VAGEM", op_gramas)
+        ("🍅 TOMATE COQUETEL", op_gramas_limpas),
+        ("🫛 VAGEM", op_gramas_limpas)
     ]
 }
 
@@ -162,11 +164,34 @@ if "cliente_end" not in st.session_state:
     st.session_state.cliente_end = ""
 if "cliente_tel" not in st.session_state:
     st.session_state.cliente_tel = ""
+if "cliente_obs" not in st.session_state:
+    st.session_state.cliente_obs = ""
 if "etapa" not in st.session_state:
     st.session_state.etapa = "pedido"
 
+def salvar_historico_pedido():
+    historico_path = "historico_pedidos.csv"
+    data_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    itens_str = "; ".join([f"{p}: {q}" for p, q in st.session_state.carrinho.items()])
+    
+    novo_registro = pd.DataFrame([{
+        "Data/Hora": data_hora,
+        "Cliente": st.session_state.cliente_nome,
+        "Endereço": st.session_state.cliente_end,
+        "Telefone": st.session_state.cliente_tel,
+        "Observação": st.session_state.cliente_obs,
+        "Itens": itens_str
+    }])
+    
+    if os.path.exists(historico_path):
+        novo_registro.to_csv(historico_path, mode='a', header=False, index=False, encoding='utf-8-sig')
+    else:
+        novo_registro.to_csv(historico_path, mode='w', header=True, index=False, encoding='utf-8-sig')
+
 # --- TELA 2: TELA DE REVISÃO E CONFIRMAÇÃO DO PEDIDO ---
 if st.session_state.etapa == "revisao":
+    salvar_historico_pedido()
+    
     st.markdown("## 🔍 Conferir Pedido")
     st.markdown("Revise os itens abaixo e os seus dados de entrega antes de enviar:")
     st.markdown("---")
@@ -175,6 +200,8 @@ if st.session_state.etapa == "revisao":
     st.markdown(f"**Nome:** {st.session_state.cliente_nome}")
     st.markdown(f"**Endereço:** {st.session_state.cliente_end}")
     st.markdown(f"**Telefone:** {st.session_state.cliente_tel}")
+    if st.session_state.cliente_obs:
+        st.markdown(f"**Observações:** {st.session_state.cliente_obs}")
     
     st.markdown("### 🗺️ Localização Aproximada de Entrega (Poços de Caldas - MG)")
     df_mapa = pd.DataFrame({
@@ -193,12 +220,13 @@ if st.session_state.etapa == "revisao":
     msg = f"*NOVO PEDIDO - BANCA DO MANÉ*\n\n"
     msg += f"👤 *Cliente:* {st.session_state.cliente_nome}\n"
     msg += f"📍 *Endereço:* {st.session_state.cliente_end}\n"
-    msg += f"📞 *Telefone:* {st.session_state.cliente_tel}\n\n"
-    msg += f"*ITENS SOLICITADOS:*\n"
+    msg += f"📞 *Telefone:* {st.session_state.cliente_tel}\n"
+    if st.session_state.cliente_obs:
+        msg += f"📝 *Obs:* {st.session_state.cliente_obs}\n"
+    msg += f"\n*ITENS SOLICITADOS:*\n"
     for p, q in st.session_state.carrinho.items():
         msg += f"- {p}: {q}\n"
     
-    # Número de teste configurado
     link_wpp = f"https://wa.me/5535991617906?text={urllib.parse.quote(msg)}"
     
     col_a, col_b, col_c = st.columns(3)
@@ -219,67 +247,68 @@ if st.session_state.etapa == "revisao":
             def header(self):
                 has_logo = os.path.exists("logo.png")
                 if has_logo:
-                    self.image("logo.png", 10, 10, 25)
-                    self.set_xy(38, 12)
+                    self.image("logo.png", 10, 10, 22)
+                    self.set_xy(35, 12)
                 else:
                     self.set_xy(10, 12)
                 
-                self.set_font("Arial", "B", 14)
+                self.set_font("Arial", "B", 13)
                 self.set_text_color(30, 61, 47) 
-                self.cell(0, 6, "BANCA DO MANÉ", 0, 1, "L" if has_logo else "C")
+                self.cell(0, 5, "BANCA DO MANÉ - FRUTAS, VERDURAS E LEGUMES", 0, 1, "L" if has_logo else "C")
                 
                 if has_logo:
-                    self.set_x(38)
+                    self.set_x(35)
                 self.set_font("Arial", "", 8)
                 self.set_text_color(100, 100, 100)
-                self.cell(0, 4, "Frutas, Verduras e Legumes - Mercado Municipal (Box 43 a 48)", 0, 1, "L" if has_logo else "C")
+                self.cell(0, 4, "Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG", 0, 1, "L" if has_logo else "C")
                 
                 if has_logo:
-                    self.set_x(38)
-                self.cell(0, 4, "Poços de Caldas - MG | Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "L" if has_logo else "C")
+                    self.set_x(35)
+                self.cell(0, 4, "Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "L" if has_logo else "C")
                 
-                self.set_y(max(self.get_y(), 32))
+                self.set_y(max(self.get_y(), 30))
                 self.ln(2)
                 self.set_draw_color(30, 61, 47)
-                self.set_line_width(0.8)
+                self.set_line_width(0.6)
                 self.line(10, self.get_y(), 200, self.get_y())
-                self.ln(6)
+                self.ln(4)
 
             def footer(self):
-                self.set_y(-25)
+                self.set_y(-20)
                 if os.path.exists("mascote.png"):
                     try:
-                        self.image("mascote.png", 175, self.get_y(), 22)
+                        self.image("mascote.png", 175, self.get_y(), 18)
                     except:
                         pass
                 
                 self.set_font("Arial", "I", 8)
                 self.set_text_color(150, 150, 150)
-                self.cell(0, 10, f"Comprovante de Pedido gerado digitalmente - Página {self.page_no()}", 0, 0, "C")
+                self.cell(0, 10, f"Comprovante de Pedido - Página {self.page_no()}", 0, 0, "C")
 
         pdf = PDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=20)
         
-        pdf.set_font("Arial", "B", 11)
-        pdf.set_text_color(50, 50, 50)
-        pdf.cell(0, 7, "COMPROVANTE DE SOLICITAÇÃO DE PEDIDO", 0, 1, "L")
-        pdf.ln(2)
-
-        pdf.set_fill_color(245, 247, 246)
+        # Cabeçalho do Cliente estilo Talão
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(0, 6, "  DADOS DO CLIENTE PARA ENTREGA:", 0, 1, "L", fill=True)
-        pdf.set_font("Arial", "", 9)
-        pdf.cell(0, 5, f"  Nome: {st.session_state.cliente_nome}", 0, 1, "L", fill=True)
-        pdf.cell(0, 5, f"  Endereço: {st.session_state.cliente_end}", 0, 1, "L", fill=True)
-        pdf.cell(0, 5, f"  Telefone: {st.session_state.cliente_tel}", 0, 1, "L", fill=True)
+        pdf.set_fill_color(245, 247, 246)
+        
+        data_atual = datetime.now().strftime("%d/%m/%Y")
+        pdf.cell(150, 6, f" CLIENTE: {st.session_state.cliente_nome}", 1, 0, "L", fill=True)
+        pdf.cell(40, 6, f" DATA: {data_atual}", 1, 1, "L", fill=True)
+        
+        pdf.cell(190, 6, f" ENDEREÇO: {st.session_state.cliente_end}", 1, 1, "L", fill=True)
+        pdf.cell(100, 6, f" FONE: {st.session_state.cliente_tel}", 1, 0, "L", fill=True)
+        pdf.cell(90, 6, f" OBS: {st.session_state.cliente_obs if st.session_state.cliente_obs else '-'}", 1, 1, "L", fill=True)
         pdf.ln(6)
 
+        # Tabela com Coluna para Valor preenchido à mão
         pdf.set_fill_color(30, 61, 47)
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Arial", "B", 9)
-        pdf.cell(130, 7, "  Produto", 1, 0, "L", fill=True)
-        pdf.cell(60, 7, "Quantidade", 1, 1, "C", fill=True)
+        pdf.cell(100, 7, "  Produto Solicitado", 1, 0, "L", fill=True)
+        pdf.cell(50, 7, "Quantidade", 1, 0, "C", fill=True)
+        pdf.cell(40, 7, "Valor (R$)", 1, 1, "C", fill=True) # Espaço para preencher a mão
 
         pdf.set_font("Arial", "", 9)
         pdf.set_text_color(50, 50, 50)
@@ -290,13 +319,15 @@ if st.session_state.etapa == "revisao":
                 pdf.set_fill_color(250, 250, 250)
             else:
                 pdf.set_fill_color(255, 255, 255)
-            pdf.cell(130, 6, f"  {p}", 1, 0, "L", fill=True)
-            pdf.cell(60, 6, f"{q}", 1, 1, "C", fill=True)
+            
+            pdf.cell(100, 6, f"  {p.lstrip('🥑🍍🍑🍈🌵🍌🥭⭐🍐🍊🍋🍏🍎🟣🍉🍈🍓🍇🥬🥗🧅🌿🥦🔴🫚🌽🫘🥚🥥🫙🍄🧊🌱🌸🥤🧄🎃🥒🍠🥔🍆🟣🥕🫛🌶️🫑🟢🍅').strip()}", 1, 0, "L", fill=True)
+            pdf.cell(50, 6, f"{q}", 1, 0, "C", fill=True)
+            pdf.cell(40, 6, "R$ ________", 1, 1, "C", fill=True) # Linha em branco para anotar o preço à mão
             fill_toggle = not fill_toggle
 
         pdf.ln(10)
         pdf.set_font("Arial", "I", 9)
-        pdf.cell(0, 6, "Agradecemos a preferência! Entraremos em contato para confirmar a entrega.", 0, 1, "C")
+        pdf.cell(0, 6, "Agradecemos a preferência! Banca do Mané - Qualidade e Tradição.", 0, 1, "C")
 
         tmp_dir = tempfile.gettempdir()
         pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
@@ -371,10 +402,12 @@ else:
             nome = st.text_input("Seu Nome:", value=st.session_state.cliente_nome)
             endereco = st.text_input("Endereço e Bairro:", value=st.session_state.cliente_end)
             telefone = st.text_input("Telefone:", value=st.session_state.cliente_tel)
+            observacao = st.text_area("Observações (Troco, portão, etc.):", value=st.session_state.cliente_obs)
             
             st.session_state.cliente_nome = nome
             st.session_state.cliente_end = endereco
             st.session_state.cliente_tel = telefone
+            st.session_state.cliente_obs = observacao
             
             st.divider()
             
