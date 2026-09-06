@@ -16,34 +16,136 @@ st.markdown("<h1 style='text-align: center; color: #1e3d2f;'>🍌 Banca do Mané
 st.markdown("<p style='text-align: center; color: #555;'>Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Catálogo organizado por categorias
+# Catálogo reestruturado com as regras exatas informadas
 catalogo = {
     "🍎 Frutas": [
-        "ABACATE", "ABACAXI HAVAÍ", "ABACAXI PÉROLA", "AMEIXA AMARELA", "AMEIXA VERM.", 
-        "ATEMÓIA", "PITAYA", "BANANA NANICA", "BANANA PRATA", "CAQUI", "CARAMBOLA", 
-        "FIGO", "GOIABA", "LARANJA BAIANA", "LARANJA LIMA", "LARANJA PERA", "LIMA DA PÉRSIA", 
-        "LIMÃO CRAVO", "LIMÃO GALEGO", "LIMÃO SICILIANO", "LIMÃO TAITI", "MAÇÃ ARGENTINA", 
-        "MAÇÃ NAC. FUJI", "MAÇÃ NAC. GALA", "MAÇÃ VERDE", "MAMÃO A. PAPAYA", "MAMÃO FORMOSA", 
-        "MANGA", "MANGA COMUM", "MARACUJÁ", "MELANCIA", "MELÃO", "MEXERICA CRAVO", 
-        "MEXERICA MURG.", "MEXERICA POKÃ", "MORANGO", "NECTARINA", "NONA", "PERA", 
-        "PÊSSEGO AMAR.", "PÊSSEGO BCO.", "UVA", "UVA COMUM", "KIWI"
+        ("ABACATE", ["Quilo", "Unidade"]),
+        ("AVOCADO", ["Quilo", "Unidade"]),
+        ("ABACAXI PÉROLA", ["Unidade"]),
+        ("AMEIXA AMARELA", ["Quilo", "Unidade"]),
+        ("AMEIXA VERMELHA", ["Quilo", "Unidade"]),
+        ("ATEMÓIA", ["Quilo", "Unidade"]),
+        ("PITAYA", ["Quilo", "Unidade"]),
+        ("BANANA NANICA", ["Quilo", "Quantidade (Unidade)"]),
+        ("BANANA PRATA", ["Quilo", "Unidade"]),
+        ("CAQUI", ["Bandeja", "Unidade"]),
+        ("CARAMBOLA", ["Bandeja"]),
+        ("FIGO", ["Bandeja"]),
+        ("GOIABA", ["Quilo", "Unidade"]),
+        ("LARANJA BAIANA", ["Quilo", "Unidade"]),
+        ("LARANJA LIMA", ["Quilo", "Unidade"]),
+        ("LARANJA PERA", ["Quilo", "Unidade"]),
+        ("LIMA DA PÉRSIA", ["Quilo", "Unidade"]),
+        ("LIMÃO CRAVO", ["Quilo", "Unidade"]),
+        ("LIMÃO SICILIANO", ["Quilo", "Unidade"]),
+        ("LIMÃO TAITI", ["Quilo", "Unidade"]),
+        ("MAÇÃ ARGENTINA", ["Quilo", "Unidade"]),
+        ("MAÇÃ NAC. FUJI", ["Quilo", "Unidade"]),
+        ("MAÇÃ NAC. GALA", ["Quilo", "Unidade"]),
+        ("MAÇÃ VERDE", ["Quilo", "Unidade"]),
+        ("MAMÃO PAPAYA", ["Quilo", "Unidade"]),
+        ("MAMÃO FORMOSA", ["Quilo", "Unidade"]),
+        ("MANGA PALMER", ["Quilo", "Unidade"]),
+        ("MANGA TOMMY", ["Quilo", "Unidade"]),
+        ("MARACUJÁ", ["Quilo", "Unidade"]),
+        ("MELANCIA", ["Inteira", "Meia", "Um Quarto"]),
+        ("MELÃO", ["Unidade"]),
+        ("MEXERICA CRAVO", ["Quilo", "Unidade"]),
+        ("MEXERICA MURGOTE", ["Quilo", "Unidade"]),
+        ("MEXERICA POKÃ", ["Quilo", "Unidade"]),
+        ("MEXERICA CHEIROSINHA", ["Quilo", "Unidade"]),
+        ("MORANGO", ["Bandeja"]),
+        ("NECTARINA", ["Quilo", "Unidade"]),
+        ("PERA", ["Quilo", "Unidade"]),
+        ("PÊSSEGO BRANCO", ["Quilo", "Unidade"]),
+        ("PÊSSEGO AMARELO", ["Quilo", "Unidade"]),
+        ("UVA SEM SEMENTE", ["Bandeja"]),
+        ("UVA COMUM", ["Quilo"]),
+        ("KIWI", ["Quilo", "Unidade"])
     ],
     "🥬 Verduras e Temperos": [
-        "ACELGA", "AGRIÃO", "ALFACE AMERICANA", "ALFACE CRESPA", "ALFACE HIDROP.", 
-        "ALFACE LISA", "ALFACE MIMOSA", "ALHO PORÓ", "ALMEIRÃO", "BRÓCOLIS", "CATALÔNIA", 
-        "CHEIRO VERDE", "CHICÓRIA", "COENTRO", "COUVE", "ESPINAFRE", "HORTELÃ", 
-        "RABANETE", "REPOLHO", "RÚCULA", "SALSA", "SALSÃO", "MANJERICÃO", "GENGIBRE", 
-        "FARINHA DE MILHO", "FEIJÃO", "OVOS BRANCOS", "OVOS CAIPIRA", "OVOS CODORNA", 
-        "OVOS VERMELHOS", "COCO", "PALMITO", "PORTO BELO", "PARIS", "SHITAKE", 
-        "SHIMEGI", "TOFU", "BROTOS", "POLPA DE FRUTAS"
+        ("ACELGA", ["Unidade"]),
+        ("AGRIÃO", ["Unidade"]),
+        ("ALFACE AMERICANA", ["Unidade"]),
+        ("ALFACE CRESPA", ["Unidade"]),
+        ("ALFACE ROXA", ["Unidade"]),
+        ("ALFACE LISA", ["Unidade"]),
+        ("ALFACE MIMOSA", ["Unidade"]),
+        ("ALHO PORÓ", ["Unidade"]),
+        ("ALMEIRÃO", ["Unidade"]),
+        ("BRÓCOLIS COMUM", ["Unidade"]),
+        ("BRÓCOLIS JAPONÊS", ["Unidade"]),
+        ("CHEIRO VERDE", ["Unidade"]),
+        ("CHICÓRIA", ["Unidade"]),
+        ("COENTRO", ["Unidade"]),
+        ("COUVE", ["Unidade"]),
+        ("ESPINAFRE", ["Unidade"]),
+        ("HORTELÃ", ["Unidade"]),
+        ("RABANETE", ["Unidade"]),
+        ("REPOLHO", ["Quilo", "Unidade"]),
+        ("RÚCULA", ["Unidade"]),
+        ("SALSA", ["Unidade"]),
+        ("SALSÃO", ["Unidade"]),
+        ("MANJERICÃO", ["Unidade"]),
+        ("ALECRIM", ["Unidade"]),
+        ("TOMILHO", ["Unidade"]),
+        ("GENGIBRE", ["Quilo", "Unidade"]),
+        ("FARINHA DE MILHO", ["Pacote 500g"]),
+        ("FEIJÃO CARIOQUINHA", ["Quilo"]),
+        ("OVO CAIPIRA", ["Caixa com 12 (Dúzia)"]),
+        ("OVO VERMELHO", ["Caixa com 12 (Dúzia)"]),
+        ("COCO VERDE", ["Unidade"]),
+        ("PALMITO", ["Vidro"]),
+        ("COGUMELO PORTOBELO", ["Bandeja"]),
+        ("COGUMELO PARIS", ["Bandeja"]),
+        ("COGUMELO SHITAKE", ["Bandeja"]),
+        ("COGUMELO SHIMEGI", ["Bandeja"]),
+        ("TOFU", ["Unidade"]),
+        ("BROTO", ["Unidade"]),
+        ("FLOR COMESTÍVEL", ["Bandeja"]),
+        ("POLPA DE FRUTAS", ["Pacote 100g"])
     ],
     "🥔 Legumes e Tubérculos": [
-        "ALHO", "ABÓBORA MADURA", "ABOBRINHA CAIPIRA", "ABOBRINHA ITÁLIA", "BATATA DOCE", 
-        "BATATA", "BATATA PIRULITO", "BERINGELA", "BETERRABA", "CABOTIÁ", "CEBOLA ROXA", 
-        "CEBOLA", "CENOURA", "COUVE-FLOR", "CHUCHU", "ERVILHA DEBUIADA", "ERVILHA TORTA", 
-        "INHAME", "JILÓ", "MANDIOCA", "MANDIQUINHA", "MILHO VERDE", "MORANGA", "MUGANGO", 
-        "PIMENTA D. DE MOÇA", "PIMENTA GODÊ", "PIMENTÃO VERDE", "PIMENTÃO VERM.", "PEPINO", 
-        "QUIABO", "TOMATÃO", "TOMATE CEREJA", "TOMATE MOLHO", "TOMATE SALADA", "VAGEM"
+        ("ALHO", ["Quilo", "Unidade"]),
+        ("ABÓBORA MADURA", ["Quilo"]),
+        ("ABOBRINHA CAIPIRA", ["Quilo", "Unidade"]),
+        ("ABOBRINHA ITÁLIA", ["Quilo", "Unidade"]),
+        ("BATATA DOCE", ["Quilo", "Unidade"]),
+        ("BATATA LAVADA", ["Quilo", "Unidade"]),
+        ("BATATA SUJA", ["Quilo", "Unidade"]),
+        ("BATATA ASTERIX", ["Quilo", "Unidade"]),
+        ("BATATA PIRULITO", ["Quilo", "Unidade"]),
+        ("BERINGELA", ["Quilo", "Unidade"]),
+        ("BETERRABA", ["Quilo", "Unidade"]),
+        ("ABÓBORA CABOTIÃ", ["Inteira", "Metade", "Um Quarto"]),
+        ("ABÓBORA CABOTIÃ PICADA", ["Bandeja"]),
+        ("CEBOLA ROXA", ["Quilo", "Unidade"]),
+        ("CEBOLA", ["Quilo", "Unidade"]),
+        ("CENOURA", ["Quilo", "Unidade"]),
+        ("COUVE-FLOR", ["Unidade"]),
+        ("CHUCHU", ["Quilo", "Unidade"]),
+        ("ERVILHA DEBULHADA CONGELADA", ["Pacote 200g"]),
+        ("ERVILHA TORTA", ["Bandeja 200g"]),
+        ("INHAME", ["Quilo", "Unidade"]),
+        ("JILÓ", ["Quilo", "Unidade"]),
+        ("MANDIOCA DESCASCADA CONGELADA", ["Pacote 1kg"]),
+        ("MANDIQUINHA", ["Quilo", "Unidade"]),
+        ("MILHO VERDE", ["Bandeja com 5 unidades"]),
+        ("MUGANGO", ["Unidade"]),
+        ("PIMENTA DEDO DE MOÇA", ["Quilo", "Unidade"]),
+        ("PIMENTA GODÊ", ["Quilo", "Unidade"]),
+        ("PIMENTÃO VERDE", ["Quilo", "Unidade"]),
+        ("PIMENTÃO AMARELO", ["Quilo", "Unidade"]),
+        ("PIMENTÃO VERMELHO", ["Quilo", "Unidade"]),
+        ("PEPINO COMUM", ["Quilo", "Unidade"]),
+        ("PEPINO JAPONÊS", ["Quilo", "Unidade"]),
+        ("QUIABO", ["100g", "200g", "500g", "1 Quilo"]),
+        ("TOMATE CEREJA", ["Bandeja", "Quilo"]),
+        ("TOMATE MOLHO", ["Quilo", "Unidade"]),
+        ("TOMATE SALADA", ["Quilo", "Unidade"]),
+        ("TOMATE HOLANDÊS", ["Quilo", "Unidade"]),
+        ("TOMATE COQUETEL", ["100g", "200g", "300g", "500g", "1 Quilo"]),
+        ("VAGEM", ["100g", "200g", "300g", "500g", "1 Quilo"])
     ]
 }
 
@@ -135,7 +237,6 @@ if st.session_state.etapa == "revisao":
 
             def footer(self):
                 self.set_y(-25)
-                # Adiciona a imagem do mascote no rodapé se o arquivo 'mascote.png' estiver no GitHub
                 if os.path.exists("mascote.png"):
                     try:
                         self.image("mascote.png", 175, self.get_y(), 22)
@@ -206,13 +307,13 @@ else:
     st.markdown("---")
     
     st.markdown(f"### 📋 Lista de {aba_selecionada}")
-    st.markdown("<small>Escolha a quantidade, se é Quilo (kg) ou Unidade (un) e clique em <b>Inserir no Pedido</b>.</small>", unsafe_allow_html=True)
+    st.markdown("<small>Escolha a quantidade, selecione a opção desejada e clique em <b>Inserir no Pedido</b>.</small>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     produtos_da_categoria = catalogo[aba_selecionada]
 
-    for produto in produtos_da_categoria:
-        c_nome, c_qtd, c_tipo, c_btn = st.columns([2.5, 1.2, 1.3, 1.5])
+    for produto, opcoes in produtos_da_categoria:
+        c_nome, c_qtd, c_tipo, c_btn = st.columns([2.5, 1.2, 1.5, 1.3])
         
         with c_nome:
             st.markdown(f"**{produto}**")
@@ -223,7 +324,7 @@ else:
             q_val = st.text_input(f"Qtd {produto}", value="1", key=f"q_{produto}", label_visibility="collapsed")
             
         with c_tipo:
-            t_val = st.selectbox(f"Tipo {produto}", ["kg", "unidade", "maço", "bandeja"], key=f"t_{produto}", label_visibility="collapsed")
+            t_val = st.selectbox(f"Tipo {produto}", opcoes, key=f"t_{produto}", label_visibility="collapsed")
             
         with c_btn:
             if st.button("Inserir ➕", key=f"btn_{produto}", use_container_width=True):
