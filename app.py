@@ -1,13 +1,16 @@
 import streamlit as st
 import pandas as pd
+from fpdf import FPDF
+import tempfile
+import os
 
 st.set_page_config(
-    page_title="Banca do Mané - Faça seu Pedido",
+    page_title="Banca do Mané - Pedido Oficial",
     page_icon="🍌",
     layout="centered"
 )
 
-# Título principal limpo e direto
+# Título principal
 st.markdown("<h1 style='text-align: center; color: #1e3d2f;'>🍌 Banca do Mané 🍅</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #555;'>Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -43,18 +46,24 @@ catalogo = {
     ]
 }
 
-# Inicializa o carrinho
+# Inicializa o carrinho e dados do cliente na sessão
 if "carrinho" not in st.session_state:
     st.session_state.carrinho = {}
+if "cliente_nome" not in st.session_state:
+    st.session_state.cliente_nome = ""
+if "cliente_end" not in st.session_state:
+    st.session_state.cliente_end = ""
+if "cliente_tel" not in st.session_state:
+    st.session_state.cliente_tel = ""
 
 # Seleção de Categoria em Abas Nativas
 aba_selecionada = st.radio("Escolha o setor:", list(catalogo.keys()), horizontal=True)
 st.markdown("---")
 
 st.markdown(f"### 📋 Lista de {aba_selecionada}")
-st.markdown("<small>Digite a quantidade desejada ao lado do item (ex: *1kg*, *3 unidades*, *1 maço*). Se deixar em branco, o item não entra no pedido.</small>", unsafe_allow_html=True)
+st.markdown("<small>Digite a quantidade desejada ao lado do item (ex: *1kg*, *3 unidades*, *1 maço*).</small>", unsafe_allow_html=True)
 
-# Exibe cada produto em uma linha limpa e legível (Nome na esquerda, Campo na direita)
+# Exibe cada produto em uma linha limpa e legível
 produtos_da_categoria = catalogo[aba_selecionada]
 
 for produto in produtos_da_categoria:
@@ -75,12 +84,12 @@ for produto in produtos_da_categoria:
         elif produto in st.session_state.carrinho and not quantidade.strip():
             del st.session_state.carrinho[produto]
 
-# --- BARRA LATERAL (CARRINHO E ENVIO) ---
+# --- BARRA LATERAL: CADASTRO E GERADOR DE PDF ---
 with st.sidebar:
     st.header("🛒 Seu Carrinho")
     
     if not st.session_state.carrinho:
-        st.info("Nenhum item adicionado ainda. Digite as quantidades nas categorias ao lado.")
+        st.info("Nenhum item adicionado ainda.")
     else:
         st.success(f"Itens selecionados: **{len(st.session_state.carrinho)}**")
         
@@ -96,34 +105,70 @@ with st.sidebar:
             st.rerun()
             
         st.divider()
-        st.subheader("📍 Dados para Entrega")
-        nome = st.text_input("Seu Nome:")
-        endereco = st.text_input("Endereço e Bairro:")
-        telefone = st.text_input("Telefone (WhatsApp):")
+        st.subheader("👤 Seus Dados (Cadastro)")
+        st.markdown("<small>Preencha uma vez para salvar no seu navegador.</small>", unsafe_allow_html=True)
         
-        if st.button("📦 Fechar Pedido", type="primary"):
+        nome = st.text_input("Seu Nome:", value=st.session_state.cliente_nome)
+        endereco = st.text_input("Endereço e Bairro:", value=st.session_state.cliente_end)
+        telefone = st.text_input("Telefone:", value=st.session_state.cliente_tel)
+        
+        # Salva na sessão do Streamlit
+        st.session_state.cliente_nome = nome
+        st.session_state.cliente_end = endereco
+        st.session_state.cliente_tel = telefone
+        
+        st.divider()
+        
+        if st.button("📄 Gerar Pedido em PDF", type="primary"):
             if not nome or not endereco:
-                st.error("Por favor, preencha seu Nome e Endereço!")
+                st.error("Preencha Nome e Endereço para gerar o PDF!")
             else:
-                msg = f"*NOVO PEDIDO - BANCA DO MANÉ*\n\n"
-                msg += f"👤 *Cliente:* {nome}\n"
-                msg += f"📍 *Endereço:* {endereco}\n"
-                msg += f"📞 *Telefone:* {telefone}\n\n"
-                msg += f"*ITENS DO PEDIDO:*\n"
-                for p, q in st.session_state.carrinho.items():
-                    msg += f"- {p}: {q}\n"
+                # Criação do PDF formatado estilo talão da Banca
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(0, 10, "BANCA DO MANÉ - PEDIDO", 0, 1, "C")
                 
-                st.session_state.pedido_gerado = msg
-                st.success("Pedido gerado com sucesso!")
-
-        if "pedido_gerado" in st.session_state and st.session_state.pedido_gerado:
-            st.markdown("---")
-            st.markdown("### 📲 Enviar no WhatsApp")
-            st.text_area("Confira o texto:", value=st.session_state.pedido_gerado, height=140)
-            
-            import urllib.parse
-            link_wpp = f"https://wa.me/5535998464384?text={urllib.parse.quote(st.session_state.pedido_gerado)}"
-            st.markdown(
-                f'<a href="{link_wpp}" target="_blank" style="background-color: #25D366; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; display: block; text-align: center;">Enviar Pedido Agora 🚀</a>',
-                unsafe_allow_html=True
-            )
+                pdf.set_font("Arial", "", 10)
+                pdf.cell(0, 6, "Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG", 0, 1, "C")
+                pdf.cell(0, 6, "Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "C")
+                pdf.line(10, 28, 200, 28)
+                pdf.ln(5)
+                
+                # Dados do Cliente
+                pdf.set_font("Arial", "B", 11)
+                pdf.cell(0, 6, "DADOS DO CLIENTE:", 0, 1)
+                pdf.set_font("Arial", "", 11)
+                pdf.cell(0, 6, f"Nome: {nome}", 0, 1)
+                pdf.cell(0, 6, f"Endereço: {endereco}", 0, 1)
+                pdf.cell(0, 6, f"Telefone: {telefone}", 0, 1)
+                pdf.ln(5)
+                
+                # Itens do Pedido
+                pdf.set_font("Arial", "B", 11)
+                pdf.cell(0, 6, "ITENS SOLICITADOS:", 0, 1)
+                pdf.set_font("Arial", "", 11)
+                
+                for p, q in st.session_state.carrinho.items():
+                    pdf.cell(120, 6, f"- {p}", 0, 0)
+                    pdf.cell(50, 6, f"Qtd: {q}", 0, 1)
+                
+                pdf.ln(10)
+                pdf.set_font("Arial", "I", 9)
+                pdf.cell(0, 6, "Pedido gerado digitalmente via App da Banca do Mané.", 0, 1, "C")
+                
+                # Salva o arquivo temporariamente
+                tmp_dir = tempfile.gettempdir()
+                pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
+                pdf.output(pdf_path)
+                
+                st.success("PDF gerado com sucesso!")
+                
+                with open(pdf_path, "rb") as pdf_file:
+                    st.download_button(
+                        label="📥 Baixar PDF do Pedido",
+                        data=pdf_file,
+                        file_name="pedido_banca_do_mane.pdf",
+                        mime="application/pdf",
+                        type="primary"
+                    )
