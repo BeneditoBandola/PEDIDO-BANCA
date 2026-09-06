@@ -123,50 +123,95 @@ with st.sidebar:
             if not nome or not endereco:
                 st.error("Preencha Nome e Endereço para gerar o PDF!")
             else:
-                # Criação do PDF formatado estilo talão da Banca
-                pdf = FPDF()
+                # Criação do PDF com design elegante
+                class PDF(FPDF):
+                    def header(self):
+                        # Tenta adicionar o logotipo se ele existir no repositório
+                        if os.path.exists("logo.png"):
+                            self.image("logo.png", 10, 10, 30)
+                            self.set_xy(45, 10)
+                        
+                        # Cabeçalho da Empresa
+                        self.set_font("Arial", "B", 15)
+                        self.set_text_color(30, 61, 47) # Verde escuro elegante
+                        self.cell(0, 7, "BANCA DO MANÉ", 0, 1, "L" if os.path.exists("logo.png") else "C")
+                        
+                        self.set_font("Arial", "", 9)
+                        self.set_text_color(100, 100, 100)
+                        self.cell(0, 5, "Frutas, Verduras e Legumes - Mercado Municipal (Box 43 a 48)", 0, 1, "L" if os.path.exists("logo.png") else "C")
+                        self.cell(0, 5, "Poços de Caldas - MG | Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "L" if os.path.exists("logo.png") else "C")
+                        
+                        self.ln(5)
+                        self.set_draw_color(30, 61, 47)
+                        self.set_line_width(0.8)
+                        self.line(10, self.get_y(), 200, self.get_y())
+                        self.ln(5)
+
+                    def footer(self):
+                        self.set_y(-15)
+                        self.set_font("Arial", "I", 8)
+                        self.set_text_color(150, 150, 150)
+                        self.cell(0, 10, f"Comprovante de Pedido gerado digitalmente - Página {self.page_no()}", 0, 0, "C")
+
+                pdf = PDF()
                 pdf.add_page()
-                pdf.set_font("Arial", "B", 16)
-                pdf.cell(0, 10, "BANCA DO MANÉ - PEDIDO", 0, 1, "C")
+                pdf.set_auto_page_break(auto=True, margin=15)
+                
+                # Título do Documento
+                pdf.set_font("Arial", "B", 12)
+                pdf.set_text_color(50, 50, 50)
+                pdf.cell(0, 8, "COMPROVANTE DE SOLICITAÇÃO DE PEDIDO", 0, 1, "L")
+                pdf.ln(2)
+
+                # Bloco de Dados do Cliente (Caixa cinza clara elegante)
+                pdf.set_fill_color(245, 247, 246)
+                pdf.set_font("Arial", "B", 10)
+                pdf.cell(0, 6, "  DADOS DO CLIENTE PARA ENTREGA:", 0, 1, "L", fill=True)
                 
                 pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 6, "Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG", 0, 1, "C")
-                pdf.cell(0, 6, "Fone: (35) 3721-0088 / (35) 9 9846-4384", 0, 1, "C")
-                pdf.line(10, 28, 200, 28)
-                pdf.ln(5)
+                pdf.cell(0, 6, f"  Nome: {nome}", 0, 1, "L", fill=True)
+                pdf.cell(0, 6, f"  Endereço: {endereco}", 0, 1, "L", fill=True)
+                pdf.cell(0, 6, f"  Telefone: {telefone}", 0, 1, "L", fill=True)
+                pdf.ln(6)
+
+                # Tabela de Itens (Cabeçalho)
+                pdf.set_fill_color(30, 61, 47)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_font("Arial", "B", 10)
+                pdf.cell(130, 8, "  Produto", 1, 0, "L", fill=True)
+                pdf.cell(60, 8, "Quantidade", 1, 1, "C", fill=True)
+
+                # Itens da Tabela
+                pdf.set_font("Arial", "", 10)
+                pdf.set_text_color(50, 50, 50)
                 
-                # Dados do Cliente
-                pdf.set_font("Arial", "B", 11)
-                pdf.cell(0, 6, "DADOS DO CLIENTE:", 0, 1)
-                pdf.set_font("Arial", "", 11)
-                pdf.cell(0, 6, f"Nome: {nome}", 0, 1)
-                pdf.cell(0, 6, f"Endereço: {endereco}", 0, 1)
-                pdf.cell(0, 6, f"Telefone: {telefone}", 0, 1)
-                pdf.ln(5)
-                
-                # Itens do Pedido
-                pdf.set_font("Arial", "B", 11)
-                pdf.cell(0, 6, "ITENS SOLICITADOS:", 0, 1)
-                pdf.set_font("Arial", "", 11)
-                
+                fill_toggle = False
                 for p, q in st.session_state.carrinho.items():
-                    pdf.cell(120, 6, f"- {p}", 0, 0)
-                    pdf.cell(50, 6, f"Qtd: {q}", 0, 1)
+                    if fill_toggle:
+                        pdf.set_fill_color(250, 250, 250)
+                    else:
+                        pdf.set_fill_color(255, 255, 255)
+                    
+                    pdf.cell(130, 7, f"  {p}", 1, 0, "L", fill=True)
+                    pdf.cell(60, 7, f"{q}", 1, 1, "C", fill=True)
+                    fill_toggle = not fill_toggle
+
+                pdf.ln(15)
                 
-                pdf.ln(10)
+                # Assinatura / Rodapé do Pedido
                 pdf.set_font("Arial", "I", 9)
-                pdf.cell(0, 6, "Pedido gerado digitalmente via App da Banca do Mané.", 0, 1, "C")
-                
+                pdf.cell(0, 6, "Agradecemos a preferência! Entraremos em contato para confirmar a entrega.", 0, 1, "C")
+
                 # Salva o arquivo temporariamente
                 tmp_dir = tempfile.gettempdir()
                 pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
                 pdf.output(pdf_path)
                 
-                st.success("PDF gerado com sucesso!")
+                st.success("PDF elegante gerado com sucesso!")
                 
                 with open(pdf_path, "rb") as pdf_file:
                     st.download_button(
-                        label="📥 Baixar PDF do Pedido",
+                        label="📥 Baixar PDF Oficial",
                         data=pdf_file,
                         file_name="pedido_banca_do_mane.pdf",
                         mime="application/pdf",
