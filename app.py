@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import json
 from fpdf import FPDF
 import tempfile
 import os
@@ -17,27 +18,27 @@ st.markdown("<h1 style='text-align: center; color: #1e3d2f;'>🍌 Banca do Mané
 st.markdown("<p style='text-align: center; color: #555;'>Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Opções padronizadas
+# Opções padronizadas + Opção livre
 op_maturacao = ["Normal", "Mais verde", "Mais maduro"]
-op_peso_kg = ["1 KG", "Meio KG (500 gr)", "Unidade"]
-op_peso_kg_simples = ["1 KG", "Meio KG (500 gr)"]
-op_gramas_limpas = ["100 gr", "200 gr", "300 gr", "400 gr", "500 gr", "600 gr", "700 gr", "800 gr", "900 gr", "1 KG"]
+op_peso_kg = ["1 KG", "2 KG", "3 KG", "Meio KG (500 gr)", "Unidade", "✏️ Outra quantidade (Digitar livremente)"]
+op_peso_kg_simples = ["1 KG", "2 KG", "3 KG", "Meio KG (500 gr)", "✏️ Outra quantidade (Digitar livremente)"]
+op_gramas_limpas = ["100 gr", "200 gr", "300 gr", "400 gr", "500 gr", "600 gr", "700 gr", "800 gr", "900 gr", "1 KG", "2 KG", "✏️ Outra quantidade (Digitar livremente)"]
 
-# Catálogo: (Nome, Opções de Medida, Permite Maturação)
+# Catálogo reestruturado
 catalogo = {
     "🍎 Frutas": [
         ("🥑 ABACATE", op_peso_kg, True),
         ("🥑 AVOCADO", op_peso_kg, True),
-        ("🍍 ABACAXI PÉROLA", ["Unidade"], True),
+        ("🍍 ABACAXI PÉROLA", ["Unidade", "2 Unidades", "3 Unidades", "✏️ Outra quantidade (Digitar livremente)"], True),
         ("🍑 AMEIXA AMARELA", op_peso_kg, True),
         ("🍑 AMEIXA VERMELHA", op_peso_kg, True),
         ("🍈 ATEMÓIA", op_peso_kg, True),
         ("🌵 PITAYA", op_peso_kg, True),
-        ("🍌 BANANA NANICA", ["Unidade", "Penca"], False),
-        ("🍌 BANANA PRATA", ["Unidade", "Penca"], False),
-        ("🥭 CAQUI", ["Bandeja", "Unidade"], True),
-        ("⭐ CARAMBOLA", ["Bandeja"], False),
-        ("FIGO", ["Bandeja"], False), 
+        ("🍌 BANANA NANICA", ["Unidade", "Penca", "2 Pencas", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🍌 BANANA PRATA", ["Unidade", "Penca", "2 Pencas", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥭 CAQUI", ["Bandeja", "2 Bandejas", "Unidade", "✏️ Outra quantidade (Digitar livremente)"], True),
+        ("⭐ CARAMBOLA", ["Bandeja", "2 Bandejas", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("FIGO", ["Bandeja", "2 Bandejas", "✏️ Outra quantidade (Digitar livremente)"], False), 
         ("🍐 GOIABA", op_peso_kg, True),
         ("🍊 LARANJA BAIANA", op_peso_kg, False),
         ("🍊 LARANJA LIMA", op_peso_kg, False),
@@ -52,58 +53,58 @@ catalogo = {
         ("🍏 MAÇÃ VERDE", op_peso_kg, False),
         ("🍈 MAMÃO PAPAYA", op_peso_kg, True),
         ("🍈 MAMÃO FORMOSA", op_peso_kg, True),
-        ("🥭 MANGA PALMER", ["Unidade"], True),
-        ("🥭 MANGA TOMMY", ["Unidade"], True),
+        ("🥭 MANGA PALMER", ["Unidade", "2 Unidades", "✏️ Outra quantidade (Digitar livremente)"], True),
+        ("🥭 MANGA TOMMY", ["Unidade", "2 Unidades", "✏️ Outra quantidade (Digitar livremente)"], True),
         ("🟣 MARACUJÁ", op_peso_kg, False),
-        ("🍉 MELANCIA", ["Inteira", "Meia", "Um Quarto"], False),
-        ("🍉 MELANCIA BABY", ["Unidade"], False),
-        ("🍈 MELÃO", ["Unidade"], False),
+        ("🍉 MELANCIA", ["Inteira", "Meia", "Um Quarto", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🍉 MELANCIA BABY", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🍈 MELÃO", ["Unidade", "2 Unidades", "✏️ Outra quantidade (Digitar livremente)"], False),
         ("🍊 MEXERICA CRAVO", op_peso_kg, False),
         ("🍊 MEXERICA MURGOTE", op_peso_kg, False),
         ("🍊 MEXERICA POKÃ", op_peso_kg, False),
         ("🍊 MEXERICA CHEIROSINHA", op_peso_kg, False),
-        ("🍓 MORANGO", ["Bandeja"], False),
+        ("🍓 MORANGO", ["Bandeja", "2 Bandejas", "✏️ Outra quantidade (Digitar livremente)"], False),
         ("🍑 NECTARINA", op_peso_kg, True),
         ("🍐 PERA", op_peso_kg, True),
         ("🍑 PÊSSEGO BRANCO", op_peso_kg, True),
         ("🍑 PÊSSEGO AMARELO", op_peso_kg, True),
-        ("🍇 UVA SEM SEMENTE VERDE", ["Bandeja"], False),
-        ("🍇 UVA SEM SEMENTE ROXA", ["Bandeja"], False),
+        ("🍇 UVA SEM SEMENTE VERDE", ["Bandeja", "2 Bandejas", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🍇 UVA SEM SEMENTE ROXA", ["Bandeja", "2 Bandejas", "✏️ Outra quantidade (Digitar livremente)"], False),
         ("🍇 UVA COMUM", op_peso_kg_simples, False),
         ("🥝 KIWI", op_peso_kg, True)
     ],
     "🥬 Verduras e Temperos": [
-        ("🥬 ACELGA", ["Unidade"], False),
-        ("🌿 AGRIÃO", ["Unidade"], False),
-        ("🥗 ALFACE AMERICANA", ["Unidade"], False),
-        ("🥗 ALFACE CRESPA", ["Unidade"], False),
-        ("🥗 ALFACE ROXA", ["Unidade"], False),
-        ("🥗 ALFACE LISA", ["Unidade"], False),
-        ("🥗 ALFACE MIMOSA", ["Unidade"], False),
-        ("🧅 ALHO PORÓ", ["Unidade"], False),
-        ("🌿 ALMEIRÃO", ["Unidade"], False),
-        ("🥦 BRÓCOLIS COMUM", ["Unidade"], False),
-        ("🥦 BRÓCOLIS JAPONÊS", ["Unidade"], False),
-        ("🌿 CHEIRO VERDE", ["Unidade"], False),
-        ("🥬 CHICÓRIA", ["Unidade"], False),
-        ("🌿 COENTRO", ["Unidade"], False),
-        ("🥬 COUVE", ["Unidade"], False),
-        ("🌿 ESPINAFRE", ["Unidade"], False),
-        ("🌿 HORTELÃ", ["Unidade"], False),
-        ("🔴 RABANETE", ["Unidade"], False),
-        ("🥬 REPOLHO", ["Unidade"], False),
-        ("🌿 RÚCULA", ["Unidade"], False),
-        ("🌿 SALSA", ["Unidade"], False),
-        ("🌿 SALSÃO", ["Unidade"], False),
-        ("🌿 MANJERICÃO", ["Unidade"], False),
-        ("🌿 ALECRIM", ["Unidade"], False),
-        ("🌿 TOMILHO", ["Unidade"], False),
+        ("🥬 ACELGA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 AGRIÃO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥗 ALFACE AMERICANA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥗 ALFACE CRESPA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥗 ALFACE ROXA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥗 ALFACE LISA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥗 ALFACE MIMOSA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🧅 ALHO PORÓ", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 ALMEIRÃO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥦 BRÓCOLIS COMUM", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥦 BRÓCOLIS JAPONÊS", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 CHEIRO VERDE", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥬 CHICÓRIA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 COENTRO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥬 COUVE", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 ESPINAFRE", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 HORTELÃ", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🔴 RABANETE", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🥬 REPOLHO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 RÚCULA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 SALSA", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 SALSÃO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 MANJERICÃO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 ALECRIM", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
+        ("🌿 TOMILHO", ["Unidade", "✏️ Outra quantidade (Digitar livremente)"], False),
         ("🫚 GENGIBRE", op_peso_kg, False),
-        ("🌽 FARINHA DE MILHO", ["Pacote 500 gr"], False),
+        ("🌽 FARINHA DE MILHO", ["Pacote 500 gr", "2 Pacotes 500 gr"], False),
         ("🫘 FEIJÃO CARIOQUINHA", op_peso_kg_simples, False),
-        ("🥚 OVO CAIPIRA", ["Caixa com 12 (Dúzia)"], False),
-        ("🥚 OVO VERMELHO", ["Caixa com 12 (Dúzia)"], False),
-        ("🥥 COCO VERDE", ["Unidade"], False),
+        ("🥚 OVO CAIPIRA", ["Caixa com 12 (Dúzia)", "2 Caixas"], False),
+        ("🥚 OVO VERMELHO", ["Caixa com 12 (Dúzia)", "2 Caixas"], False),
+        ("🥥 COCO VERDE", ["Unidade", "2 Unidades"], False),
         ("🫙 PALMITO", ["Vidro"], False),
         ("🍄 CÓGUMELO PORTOBELO", ["Bandeja"], False),
         ("🍄 COGUMELO PARIS", ["Bandeja"], False),
@@ -116,7 +117,7 @@ catalogo = {
     ],
     "🥔 Legumes e Tubérculos": [
         ("🧄 ALHO", op_peso_kg, False),
-        ("🎃 ABÓBORA MADURA", ["2 dedos", "3 dedos", "1 KG", "Meio KG (500 gr)"], False),
+        ("🎃 ABÓBORA MADURA", ["2 dedos", "3 dedos", "1 KG", "2 KG", "Meio KG (500 gr)", "✏️ Outra quantidade (Digitar livremente)"], False),
         ("🥒 ABOBRINHA CAIPIRA", op_peso_kg, False),
         ("🥒 ABOBRINHA ITÁLIA", op_peso_kg, False),
         ("🍠 BATATA DOCE", op_peso_kg, False),
@@ -137,7 +138,7 @@ catalogo = {
         ("🫛 ERVILHA TORTA", ["Bandeja 200 gr"], False),
         ("🥔 INHAME", op_peso_kg, False),
         ("🟢 JILÓ", op_peso_kg, False),
-        ("🍠 MANDIOCA DESCASCADA CONGELADA", ["Pacote 1 KG"], False),
+        ("🍠 MANDIOCA DESCASCADA CONGELADA", ["Pacote 1 KG", "2 Pacotes 1 KG"], False),
         ("🥕 MANDIOQUINHA", op_peso_kg, False),
         ("🌽 MILHO VERDE", ["Bandeja com 5 unidades"], False),
         ("🎃 MUGANGO", ["Unidade"], False),
@@ -174,35 +175,42 @@ if "cliente_obs" not in st.session_state:
 if "etapa" not in st.session_state:
     st.session_state.etapa = "pedido"
 
-def salvar_historico_pedido():
-    historico_path = "historico_pedidos.csv"
+def salvar_historico_json():
+    """Salva os dados do pedido em formato estruturado JSON"""
+    json_path = "historico_pedidos.json"
     data_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    itens_str = "; ".join([f"{p}: {q}" for p, q in st.session_state.carrinho.items()])
     
-    novo_registro = pd.DataFrame([{
-        "Data/Hora": data_hora,
-        "Cliente": st.session_state.cliente_nome,
-        "Endereço": st.session_state.cliente_end,
-        "Telefone": st.session_state.cliente_tel,
-        "E-mail": st.session_state.cliente_email,
-        "Observação": st.session_state.cliente_obs,
-        "Itens": itens_str
-    }])
+    novo_pedido = {
+        "data_hora": data_hora,
+        "cliente": st.session_state.cliente_nome,
+        "endereco": st.session_state.cliente_end,
+        "telefone": st.session_state.cliente_tel,
+        "email": st.session_state.cliente_email,
+        "observacao": st.session_state.cliente_obs,
+        "itens": st.session_state.carrinho
+    }
     
-    if os.path.exists(historico_path):
-        novo_registro.to_csv(historico_path, mode='a', header=False, index=False, encoding='utf-8-sig')
-    else:
-        novo_registro.to_csv(historico_path, mode='w', header=True, index=False, encoding='utf-8-sig')
+    dados_existentes = []
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                dados_existentes = json.load(f)
+        except:
+            dados_existentes = []
+            
+    dados_existentes.append(novo_pedido)
+    
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
 # --- TELA 2: TELA DE REVISÃO E ENVIO AUTOMÁTICO ---
 if st.session_state.etapa == "revisao":
-    salvar_historico_pedido()
+    salvar_historico_json()
     
-    st.markdown("## ✅ Pedido Concluído e Enviado!")
-    st.markdown("O seu pedido foi gerado com sucesso e encaminhado para a Banca do Mané.")
+    st.markdown("## ✅ Pedido Concluído e Pronto para Envio!")
+    st.markdown("Clique no botão abaixo para enviar o pedido diretamente para o WhatsApp da Banca.")
     st.markdown("---")
     
-    # Geração do PDF em background
     class PDF(FPDF):
         def header(self):
             has_logo = os.path.exists("logo.png")
@@ -287,13 +295,12 @@ if st.session_state.etapa == "revisao":
 
     pdf.ln(10)
     pdf.set_font("Arial", "I", 9)
-    pdf.cell(0, 6, "Agradecemos a preferência! Banca do Mané - Qualidade e Tradicao.", 0, 1, "C")
+    pdf.cell(0, 6, "Agradecemos a preferência! Banca do Mané - Qualidade e Tradição.", 0, 1, "C")
 
     tmp_dir = tempfile.gettempdir()
     pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
     pdf.output(pdf_path)
 
-    # Monta a mensagem do WhatsApp
     msg = f"*NOVO PEDIDO - BANCA DO MANÉ*\n\n"
     msg += f"👤 *Cliente:* {st.session_state.cliente_nome}\n"
     msg += f"📍 *Endereço:* {st.session_state.cliente_end}\n"
@@ -307,12 +314,9 @@ if st.session_state.etapa == "revisao":
         msg += f"- {p}: {q}\n"
 
     link_wpp = f"https://wa.me/5535991617906?text={urllib.parse.quote(msg)}"
-
-    st.success("Seu pedido foi registrado com sucesso!")
     
-    # Botão para disparar o WhatsApp instantaneamente
     st.markdown(
-        f'<a href="{link_wpp}" target="_blank" style="background-color: #25D366; color: white; padding: 14px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: block; text-align: center; font-size: 1.1rem; margin-bottom: 15px;">📲 Clique aqui para enviar o pedido via WhatsApp</a>',
+        f'<a href="{link_wpp}" target="_blank" style="background-color: #25D366; color: white; padding: 16px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: block; text-align: center; font-size: 1.2rem; margin-bottom: 15px;">📲 ENVIAR PEDIDO AGORA NO WHATSAPP</a>',
         unsafe_allow_html=True
     )
 
@@ -337,7 +341,7 @@ else:
     st.markdown("---")
     
     st.markdown(f"### 📋 Lista de {aba_selecionada}")
-    st.markdown("<small>Escolha os itens desejados e clique em <b>Inserir no Pedido</b>.</small>", unsafe_allow_html=True)
+    st.markdown("<small>Escolha os itens desejados ou digite livremente e clique em <b>Inserir no Pedido</b>.</small>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     produtos_da_categoria = catalogo[aba_selecionada]
@@ -347,58 +351,40 @@ else:
         opcoes_medida = item[1]
         permite_maturacao = item[2]
 
-        # Verifica se é uma unidade fracionada/especial para ocultar o campo numérico "1"
-        usa_quantidade_numerica = not any(opcao in str(opcoes_medida) for opcao in ["Meio KG", "gr", "dedos", "Inteira", "Meia", "Um Quarto", "Pacote", "Caixa", "Bandeja", "Vidro"])
-
-        if permite_maturacao and usa_quantidade_numerica:
-            c_nome, c_qtd, c_mat, c_tipo, c_btn = st.columns([2.2, 0.8, 1.2, 1.2, 1.1])
-        elif permite_maturacao or usa_quantidade_numerica:
-            c_nome, c_col2, c_tipo, c_btn = st.columns([2.5, 1.2, 1.4, 1.3])
+        if permite_maturacao:
+            c_nome, c_mat, c_tipo, c_btn = st.columns([2.2, 1.4, 1.9, 1.1])
         else:
-            c_nome, c_tipo, c_btn = st.columns([3.0, 1.6, 1.4])
+            c_nome, c_tipo, c_btn = st.columns([2.8, 2.1, 1.1])
         
         with c_nome:
             st.markdown(f"**{produto}**")
             if produto in st.session_state.carrinho:
                 st.markdown(f"<small style='color: green;'>✔ Carrinho: <b>{st.session_state.carrinho[produto]}</b></small>", unsafe_allow_html=True)
                 
-        if permite_maturacao and usa_quantidade_numerica:
-            with c_qtd:
-                q_val = st.text_input(f"Qtd {produto}", value="1", key=f"q_{produto}", label_visibility="collapsed")
+        if permite_maturacao:
             with c_mat:
-                m_val = st.selectbox(f"Mat {produto}", op_maturacao, key=f"m_{produto}", label_visibility="collapsed")
-            with c_tipo:
-                t_val = st.selectbox(f"Tipo {produto}", opcoes_medida, key=f"t_{produto}", label_visibility="collapsed")
-        elif usa_quantidade_numerica:
-            with c_col2:
-                q_val = st.text_input(f"Qtd {produto}", value="1", key=f"q_{produto}", label_visibility="collapsed")
-            with c_tipo:
-                t_val = st.selectbox(f"Tipo {produto}", opcoes_medida, key=f"t_{produto}", label_visibility="collapsed")
-        elif permite_maturacao:
-            with c_col2:
                 m_val = st.selectbox(f"Mat {produto}", op_maturacao, key=f"m_{produto}", label_visibility="collapsed")
             with c_tipo:
                 t_val = st.selectbox(f"Tipo {produto}", opcoes_medida, key=f"t_{produto}", label_visibility="collapsed")
         else:
             with c_tipo:
                 t_val = st.selectbox(f"Tipo {produto}", opcoes_medida, key=f"t_{produto}", label_visibility="collapsed")
+        
+        # Se escolheu a opção livre, exibe um campo de texto ao lado
+        livre_val = ""
+        if "Outra quantidade" in t_val:
+            livre_val = st.text_input(f"Especifique {produto}", placeholder="Ex: 1kg e meio...", key=f"livre_{produto}")
             
         with c_btn:
             if st.button("Inserir ➕", key=f"btn_{produto}", use_container_width=True):
-                if usa_quantidade_numerica:
-                    if q_val.strip():
-                        if permite_maturacao and m_val != "Normal":
-                            st.session_state.carrinho[produto] = f"{q_val} {t_val} ({m_val})"
-                        else:
-                            st.session_state.carrinho[produto] = f"{q_val} {t_val}"
-                        st.rerun()
+                # Define a quantidade final (se for livre, pega o texto digitado)
+                qtd_final = livre_val if "Outra quantidade" in t_val and livre_val else t_val
+                
+                if permite_maturacao and m_val != "Normal":
+                    st.session_state.carrinho[produto] = f"{qtd_final} ({m_val})"
                 else:
-                    # Sem número fixo na frente para medidas fracionadas (ex: "Meio KG", "3 dedos")
-                    if permite_maturacao and m_val != "Normal":
-                        st.session_state.carrinho[produto] = f"{t_val} ({m_val})"
-                    else:
-                        st.session_state.carrinho[produto] = f"{t_val}"
-                    st.rerun()
+                    st.session_state.carrinho[produto] = f"{qtd_final}"
+                st.rerun()
 
         st.markdown("<hr style='margin: 5px 0px; border-color: #eee;'>", unsafe_allow_html=True)
 
@@ -429,7 +415,7 @@ else:
             nome = st.text_input("Seu Nome:", value=st.session_state.cliente_nome)
             endereco = st.text_input("Endereço e Bairro:", value=st.session_state.cliente_end)
             telefone = st.text_input("Telefone:", value=st.session_state.cliente_tel)
-            email = st.text_input("E-mail (Opcional para cópia):", value=st.session_state.cliente_email)
+            email = st.text_input("E-mail (Opcional):", value=st.session_state.cliente_email)
             observacao = st.text_area("Observações (Troco, portão, etc.):", value=st.session_state.cliente_obs)
             
             st.session_state.cliente_nome = nome
