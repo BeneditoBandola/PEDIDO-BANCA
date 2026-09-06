@@ -4,8 +4,12 @@ import json
 from fpdf import FPDF
 import tempfile
 import os
-import urllib.parse
 from datetime import datetime
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 st.set_page_config(
     page_title="Banca do Mané - Fazer Pedido",
@@ -176,7 +180,6 @@ if "etapa" not in st.session_state:
     st.session_state.etapa = "pedido"
 
 def salvar_historico_json():
-    """Salva os dados do pedido em formato estruturado JSON"""
     json_path = "historico_pedidos.json"
     data_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -203,13 +206,45 @@ def salvar_historico_json():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
+def enviar_email_banca(pdf_path, cliente_nome):
+    """Envia o PDF do pedido automaticamente para o e-mail da banca"""
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    
+    # IMPORTANTE: Insira aqui o e-mail remetente e a Senha de App gerada na sua conta Google
+    remetente = "seu_email_envio@gmail.com"
+    senha_app = "sua_senha_de_app_aqui"
+    destinatario = "andreiabolzanmenezes@gmail.com"
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = remetente
+        msg['To'] = destinatario
+        msg['Subject'] = f"🛒 Novo Pedido de {cliente_nome} - Banca do Mané"
+        
+        corpo = f"Olá!\n\nUm novo pedido foi realizado no sistema da Banca do Mané pelo cliente {cliente_nome}.\nO comprovante em PDF segue em anexo para separação e conferência.\n\nAtenciosamente,\nSistema Banca do Mané"
+        msg.attach(MIMEText(corpo, 'plain'))
+        
+        with open(pdf_path, "rb") as f:
+            parte = MIMEBase('application', 'octet-stream')
+            parte.set_payload(f.read())
+            encoders.encode_base64(parte)
+            parte.add_header('Content-Disposition', f'attachment; filename="pedido_{cliente_nome.replace(" ", "_")}.pdf"')
+            msg.attach(parte)
+            
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(remetente, senha_app)
+        server.sendmail(remetente, destinatario, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {e}")
+        return False
+
 # --- TELA 2: TELA DE REVISÃO E ENVIO AUTOMÁTICO ---
 if st.session_state.etapa == "revisao":
     salvar_historico_json()
-    
-    st.markdown("## ✅ Pedido Concluído e Pronto para Envio!")
-    st.markdown("Clique no botão abaixo para enviar o pedido diretamente para o WhatsApp da Banca.")
-    st.markdown("---")
     
     class PDF(FPDF):
         def header(self):
@@ -301,33 +336,11 @@ if st.session_state.etapa == "revisao":
     pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
     pdf.output(pdf_path)
 
-    msg = f"*NOVO PEDIDO - BANCA DO MANÉ*\n\n"
-    msg += f"👤 *Cliente:* {st.session_state.cliente_nome}\n"
-    msg += f"📍 *Endereço:* {st.session_state.cliente_end}\n"
-    msg += f"📞 *Telefone:* {st.session_state.cliente_tel}\n"
-    if st.session_state.cliente_email:
-        msg += f"📧 *E-mail:* {st.session_state.cliente_email}\n"
-    if st.session_state.cliente_obs:
-        msg += f"📝 *Obs:* {st.session_state.cliente_obs}\n"
-    msg += f"\n*ITENS SOLICITADOS:*\n"
-    for p, q in st.session_state.carrinho.items():
-        msg += f"- {p}: {q}\n"
+    # Dispara o e-mail automaticamente em background para a banca
+    enviar_email_banca(pdf_path, st.session_state.cliente_nome)
 
-    link_wpp = f"https://wa.me/5535991617906?text={urllib.parse.quote(msg)}"
-    
-    st.markdown(
-        f'<a href="{link_wpp}" target="_blank" style="background-color: #25D366; color: white; padding: 16px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: block; text-align: center; font-size: 1.2rem; margin-bottom: 15px;">📲 ENVIAR PEDIDO AGORA NO WHATSAPP</a>',
-        unsafe_allow_html=True
-    )
-
-    with open(pdf_path, "rb") as pdf_file:
-        st.download_button(
-            label="📥 Baixar Cópia do Comprovante em PDF",
-            data=pdf_file,
-            file_name="pedido_banca_do_mane.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
+    st.success("🎉 Pedido enviado com sucesso para a Banca do Mané!")
+    st.info("Recebemos suas informações. Em breve entraremos em contato para confirmar a entrega.")
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🔄 Fazer Novo Pedido", use_container_width=True):
@@ -370,14 +383,12 @@ else:
             with c_tipo:
                 t_val = st.selectbox(f"Tipo {produto}", opcoes_medida, key=f"t_{produto}", label_visibility="collapsed")
         
-        # Se escolheu a opção livre, exibe um campo de texto ao lado
         livre_val = ""
         if "Outra quantidade" in t_val:
             livre_val = st.text_input(f"Especifique {produto}", placeholder="Ex: 1kg e meio...", key=f"livre_{produto}")
             
         with c_btn:
             if st.button("Inserir ➕", key=f"btn_{produto}", use_container_width=True):
-                # Define a quantidade final (se for livre, pega o texto digitado)
                 qtd_final = livre_val if "Outra quantidade" in t_val and livre_val else t_val
                 
                 if permite_maturacao and m_val != "Normal":
