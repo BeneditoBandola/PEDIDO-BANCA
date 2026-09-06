@@ -213,8 +213,8 @@ def enviar_email_banca(pdf_path, cliente_nome):
     
     # ====================================================
     # COLOQUE SEU E-MAIL DO GMAIL E A SENHA DE APP AQUI:
-    remetente = "SEU_EMAIL_AQUI@gmail.com"
-    senha_app = "SUA_SENHA_DE_16_DIGITOS"
+    remetente = "beneditobandola@gmail.com"
+    senha_app = "gegh benf khmt zhyn"
     # ====================================================
     
     destinatario = "andreiabolzanmenezes@gmail.com"
