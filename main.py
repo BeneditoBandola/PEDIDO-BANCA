@@ -15,6 +15,9 @@ ARQUIVO_HISTORICO = "historico_pedidos.json"
 # Cole aqui a URL do Webhook do Make (vamos configurar no passo 2)
 WEBHOOK_MAKE_URL = os.environ.get("WEBHOOK_MAKE_URL", "")
 
+# Número de telefone autorizado
+NUMERO_AUTORIZADO = "3598464384"
+
 
 def limpiar_texto_pdf(texto):
   if not texto:
@@ -255,9 +258,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   pdf.output(pdf_path)
 
   # Dispara os dados para o Make em background
-  threading.Thread(
-      target=enviar_para_make, args=(novo_pedido,)
-  ).start()
+  threading.Thread(target=enviar_para_make, args=(novo_pedido,)).start()
 
   return True, codigo_pedido
 
@@ -287,9 +288,13 @@ def receber_mensagem():
           400,
       )
 
-    texto = dados.get("mensagem", "")
-    remetente = dados.get("telefone", "Cliente WhatsApp")
+    remetente = str(dados.get("telefone", ""))
+    
+    # Validação rigorosa: ignora imediatamente qualquer número que não seja o autorizado
+    if NUMERO_AUTORIZADO not in remetente:
+      return jsonify({"status": "ignorado", "motivo": "Número não autorizado"}), 200
 
+    texto = dados.get("mensagem", "")
     if not texto:
       return (
           jsonify(
@@ -298,7 +303,7 @@ def receber_mensagem():
           400,
       )
 
-    sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, str(remetente))
+    sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
     if sucesso:
       return jsonify({"status": "sucesso", "pedido": msg_retorno}), 200
     else:
