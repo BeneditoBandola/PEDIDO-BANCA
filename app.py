@@ -273,34 +273,62 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
-# Interpretador Aprimorado com Preenchimento Automático de Dados Fictícios
+# Novo Interpretador Dinâmico Completo para WhatsApp
 def importar_texto_whatsapp(texto):
     linhas = texto.strip().split("\n")
     
-    # Preenche dados padrão automáticos caso estejam vazios
     if not st.session_state.cliente_nome:
         st.session_state.cliente_nome = "Cliente WhatsApp"
     if not st.session_state.cliente_end:
         st.session_state.cliente_end = "Mercado Municipal (Retirada / Entrega WhatsApp)"
     if not st.session_state.cliente_tel:
-        st.session_state.cliente_tel = "(35) 99999-9999" # Telefone fictício padrão
+        st.session_state.cliente_tel = "(35) 99999-9999"
         
     for linha in linhas:
         linha_inf = linha.lower().strip()
         if not linha_inf:
             continue
             
-        # Captura observações de entrega
-        if "manhã" in linha_inf or "manha" in linha_inf or "entrega" in linha_inf or "mandar" in linha_inf:
-            st.session_state.cliente_obs = linha.strip()
+        if any(w in linha_inf for w in ["hj", "hoje", "manhã", "manha", "entrega", "mandar", "por favor"]):
+            if len(linha_inf) > 8:
+                st.session_state.cliente_obs = linha.strip()
             continue
             
         produto_encontrado = None
         
-        if "tomate cereja" in linha_inf:
+        # Mapeamento completo e flexível de termos
+        if "limão" in linha_inf or "limao" in linha_inf:
+            produto_encontrado = "🍋 LIMÃO TAITI"
+        elif "abacaxi" in linha_inf:
+            produto_encontrado = "🍍 ABACAXI PÉROLA"
+        elif "morango" in linha_inf:
+            produto_encontrado = "🍓 MORANGO"
+        elif "manga" in linha_inf:
+            produto_encontrado = "🥭 MANGA PALMER"
+        elif "pepino" in linha_inf:
+            produto_encontrado = "🥒 PEPINO JAPONÊS"
+        elif "tomate cereja" in linha_inf:
             produto_encontrado = "🍅 TOMATE CEREJA"
         elif "tomate" in linha_inf:
             produto_encontrado = "🍅 TOMATE SALADA"
+        elif "couve flor" in linha_inf or "couve-flor" in linha_inf:
+            produto_encontrado = "🥦 COUVE-FLOR"
+        elif "couve" in linha_inf:
+            produto_encontrado = "🥬 COUVE"
+        elif "jiló" in linha_inf or "jilo" in linha_inf:
+            produto_encontrado = "🟢 JILÓ"
+        elif "quiabo" in linha_inf:
+            produto_encontrado = "🟢 QUIABO"
+        elif "ervilha" in linha_inf:
+            produto_encontrado = "🫛 ERVILHA DEBULHADA CONGELADA"
+        elif "salsinha" in linha_inf or "salsa" in linha_inf:
+            produto_encontrado = "🌿 SALSA"
+        elif "agrião" in linha_inf or "agriao" in linha_inf:
+            produto_encontrado = "🌿 AGRIÃO"
+        elif "rúcula" in linha_inf or "rucula" in linha_inf:
+            produto_encontrado = "🌿 RÚCULA"
+        elif "repolho" in linha_inf:
+            produto_encontrado = "🥬 REPOLHO"
         elif "banana" in linha_inf:
             produto_encontrado = "🍌 BANANA PRATA"
         elif "goiaba" in linha_inf:
@@ -309,8 +337,6 @@ def importar_texto_whatsapp(texto):
             produto_encontrado = "🍐 PERA"
         elif "mamão" in linha_inf or "mamao" in linha_inf:
             produto_encontrado = "🍈 MAMÃO FORMOSA"
-        elif "manga" in linha_inf:
-            produto_encontrado = "🥭 MANGA PALMER"
         elif "maçã" in linha_inf or "maca" in linha_inf:
             produto_encontrado = "🍎 MAÇÃ NACIONAL GALA"
         elif "cebola" in linha_inf:
@@ -332,24 +358,18 @@ def importar_texto_whatsapp(texto):
             nums = re.findall(r'\d+', linha_inf)
             qtd_num = nums[0] if nums else "1"
             
-            maturacao_sufixo = ""
-            if "madur" in linha_inf or "consumo" in linha_inf:
-                maturacao_sufixo = " (Mais maduro)"
-            elif "verde" in linha_inf:
-                maturacao_sufixo = " (Mais verde)"
-                
             if "dz" in linha_inf or "dúzia" in linha_inf:
-                q_str = f"Caixa com 12 (Dúzia){maturacao_sufixo}"
-            elif "300 g" in linha_inf or "300g" in linha_inf:
-                q_str = f"300 gr{maturacao_sufixo}"
-            elif "1/2" in linha_inf or "meio" in linha_inf:
-                q_str = f"Meio KG (500 gr){maturacao_sufixo}"
-            elif "k" in linha_inf:
-                q_str = f"{qtd_num} KG{maturacao_sufixo}"
-            elif produto_encontrado == "🌿 CHEIRO VERDE":
-                q_str = "Unidade"
+                q_str = f"{qtd_num} Caixa(s) com 12 (Dúzia)" if "limão" in linha_inf or "limao" in linha_inf else f"Caixa com 12 (Dúzia)"
+                if "dz" in linha_inf and int(qtd_num) > 1 and "limão" in linha_inf:
+                    q_str = f"{qtd_num} Dúzias"
+            elif "cx" in linha_inf or "caixa" in linha_inf:
+                q_str = f"{qtd_num} Bandeja(s)" if "morango" in linha_inf else f"{qtd_num} Caixas"
+            elif "k" in linha_inf or "kg" in linha_inf:
+                q_str = f"{qtd_num} KG"
+            elif produto_encontrado in ["🌿 CHEIRO VERDE", "🥬 COUVE", "🌿 AGRIÃO", "🌿 RÚCULA"]:
+                q_str = f"{qtd_num} Unidade(s)"
             else:
-                q_str = f"{qtd_num} Unidades{maturacao_sufixo}"
+                q_str = f"{qtd_num} Unidades"
                 
             st.session_state.carrinho[produto_encontrado] = q_str
 
@@ -514,7 +534,7 @@ else:
         
         with st.expander("📲 Importar Pedido do WhatsApp"):
             st.markdown("<small>Cole a lista enviada pelo cliente abaixo:</small>", unsafe_allow_html=True)
-            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="1dz de banana BEM madura...\n4 goiabas maduras...", label_visibility="collapsed")
+            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="3 dz de limão\n2 abacaxi\n2 cx de morango...", label_visibility="collapsed")
             if st.button("Converter em Pedido", use_container_width=True):
                 if texto_wpp.strip():
                     importar_texto_whatsapp(texto_wpp)
