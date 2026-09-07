@@ -1,19 +1,19 @@
 from datetime import datetime
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from fpdf import FPDF
 import json
 import os
 import re
-import smtplib
 import tempfile
+import threading
+import requests  # Importado para enviar os dados para o Make
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
 ARQUIVO_HISTORICO = "historico_pedidos.json"
+
+# Cole aqui a URL do Webhook do Make (vamos configurar no passo 2)
+WEBHOOK_MAKE_URL = os.environ.get("WEBHOOK_MAKE_URL", "")
 
 
 def limpiar_texto_pdf(texto):
@@ -254,59 +254,25 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   pdf_path = os.path.join(tmp_dir, f"pedido_whatsapp.pdf")
   pdf.output(pdf_path)
 
-  # Envio direto para garantir a execução síncrona neste teste
-  enviar_email_automatico(pdf_path, codigo_pedido)
+  # Dispara os dados para o Make em background
+  threading.Thread(
+      target=enviar_para_make, args=(novo_pedido,)
+  ).start()
 
   return True, codigo_pedido
 
 
-def enviar_email_automatico(pdf_path, codigo_pedido):
-  smtp_server = "smtp.gmail.com"
-  smtp_port = 587
-  remetente = os.environ.get("EMAIL_REMETENTE")
-  senha_app = os.environ.get("SENHA_APP")
-  destinatarios = [
-      "andreiabolzanmenezes@gmail.com",
-      "beneditobandola@gmail.com",
-  ]
-
-  print(
-      f"DEBUG: Tentando enviar e-mail. Remetente configurado:"
-      f" {bool(remetente)} | Senha configurada: {bool(senha_app)}"
-  )
-
-  if not remetente or not senha_app:
-    print(
-        "[ERRO SMTP] Variáveis EMAIL_REMETENTE ou SENHA_APP estão vazias no"
-        " Render!"
-    )
+def enviar_para_make(dados_pedido):
+  url = os.environ.get("WEBHOOK_MAKE_URL")
+  if not url:
+    print("[AVISO] WEBHOOK_MAKE_URL não configurada no Render.")
     return
 
-  server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-  server.starttls()
-  server.login(remetente, senha_app)
-
-  for destinatario in destinatarios:
-    msg = MIMEMultipart()
-    msg["From"] = remetente
-    msg["To"] = destinatario
-    msg["Subject"] = f"🛒 Pedido WhatsApp {codigo_pedido} - Banca do Mané"
-
-    corpo = f"Olá!\n\nNovo pedido automatizado recebido via WhatsApp ({codigo_pedido}).\nO PDF de conferência está em anexo.\n\nSistema Banca do Mané"
-    msg.attach(MIMEText(corpo, "plain"))
-
-    with open(pdf_path, "rb") as f:
-      parte = MIMEBase("application", "octet-stream")
-      parte.set_payload(f.read())
-      encoders.encode_base64(parte)
-      parte.add_header(
-          "Content-Disposition", 'attachment; filename="pedido_whatsapp.pdf"'
-      )
-      msg.attach(parte)
-
-    server.sendmail(remetente, destinatario, msg.as_string())
-  server.quit()
-  print(f"[SUCESSO] E-mail do pedido {codigo_pedido} enviado com sucesso!")
+  try:
+    response = requests.post(url, json=dados_pedido, timeout=10)
+    print(f"[MAKE] Resposta do disparo para o Make: {response.status_code}")
+  except Exception as e:
+    print(f"[ERRO MAKE] Falha ao enviar dados para o Make: {e}")
 
 
 @app.route("/webhook-whatsapp", methods=["POST"])
@@ -338,7 +304,6 @@ def receber_mensagem():
     else:
       return jsonify({"status": "erro", "detalhe": msg_retorno}), 400
   except Exception as e:
-    print(f"[ERRO GERAL NO WEBHOOK]: {e}")
     return jsonify({"status": "erro", "detalhe": str(e)}), 500
 
 
