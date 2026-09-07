@@ -280,7 +280,7 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
-# Motor Dinâmico e Robusto para Mensagens do WhatsApp
+# Motor Dinâmico e Robusto para Mensagens do WhatsApp (Com tolerância a erros de digitação)
 def importar_texto_whatsapp(texto):
     linhas = texto.strip().split("\n")
     
@@ -325,7 +325,7 @@ def importar_texto_whatsapp(texto):
             produto_encontrado = "JILÓ"
         elif "quiabo" in linha_inf:
             produto_encontrado = "QUIABO"
-        elif "ervilha" in linha_inf:
+        elif "ervilha" in linha_inf or "ervlha" in linha_inf:  # Tolerância a erro de digitação comum
             produto_encontrado = "ERVILHA DEBULHADA CONGELADA"
         elif "salsinha" in linha_inf or "salsa" in linha_inf:
             produto_encontrado = "SALSA"
@@ -371,9 +371,9 @@ def importar_texto_whatsapp(texto):
             elif "k" in linha_inf or "kg" in linha_inf:
                 q_str = f"{qtd_num} KG"
             elif produto_encontrado in ["CHEIRO VERDE", "COUVE", "AGRIÃO", "RÚCULA", "REPOLHO"]:
-                q_str = f"{qtd_num} Unidade(s)"
+                q_str = f"{qtd_num} Unidade" if int(qtd_num) == 1 else f"{qtd_num} Unidades"
             else:
-                q_str = f"{qtd_num} Unidades"
+                q_str = f"{qtd_num} Unidade" if int(qtd_num) == 1 else f"{qtd_num} Unidades"
                 
             st.session_state.carrinho[produto_encontrado] = q_str
 
@@ -538,7 +538,7 @@ else:
         
         with st.expander("📲 Importar Pedido do WhatsApp"):
             st.markdown("<small>Cole a lista enviada pelo cliente abaixo:</small>", unsafe_allow_html=True)
-            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="3 dz de limão\n2 abacaxi\n2 cx de morango...", label_visibility="collapsed")
+            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="3 dz de limão\n2 abacaxi\n1k de ervlha...", label_visibility="collapsed")
             if st.button("Converter em Pedido", use_container_width=True):
                 if texto_wpp.strip():
                     importar_texto_whatsapp(texto_wpp)
