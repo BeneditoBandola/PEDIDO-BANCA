@@ -3,13 +3,12 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from fpdf import FPDF  # <--- Importação que estava faltando!
+from fpdf import FPDF
 import json
 import os
 import re
 import smtplib
 import tempfile
-import threading
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -255,10 +254,8 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   pdf_path = os.path.join(tmp_dir, f"pedido_whatsapp.pdf")
   pdf.output(pdf_path)
 
-  # Dispara o e-mail em background
-  threading.Thread(
-      target=enviar_email_automatico, args=(pdf_path, codigo_pedido)
-  ).start()
+  # Envio direto (síncrono) para capturar qualquer exceção na resposta
+  enviar_email_automatico(pdf_path, codigo_pedido)
 
   return True, codigo_pedido
 
@@ -273,33 +270,30 @@ def enviar_email_automatico(pdf_path, codigo_pedido):
       "beneditobandola@gmail.com",
   ]
 
-  try:
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(remetente, senha_app)
+  server = smtplib.SMTP(smtp_server, smtp_port)
+  server.starttls()
+  server.login(remetente, senha_app)
 
-    for destinatario in destinatarios:
-      msg = MIMEMultipart()
-      msg["From"] = remetente
-      msg["To"] = destinatario
-      msg["Subject"] = f"🛒 Pedido WhatsApp {codigo_pedido} - Banca do Mané"
+  for destinatario in destinatarios:
+    msg = MIMEMultipart()
+    msg["From"] = remetente
+    msg["To"] = destinatario
+    msg["Subject"] = f"🛒 Pedido WhatsApp {codigo_pedido} - Banca do Mané"
 
-      corpo = f"Olá!\n\nNovo pedido automatizado recebido via WhatsApp ({codigo_pedido}).\nO PDF de conferência está em anexo.\n\nSistema Banca do Mané"
-      msg.attach(MIMEText(corpo, "plain"))
+    corpo = f"Olá!\n\nNovo pedido automatizado recebido via WhatsApp ({codigo_pedido}).\nO PDF de conferência está em anexo.\n\nSistema Banca do Mané"
+    msg.attach(MIMEText(corpo, "plain"))
 
-      with open(pdf_path, "rb") as f:
-        parte = MIMEBase("application", "octet-stream")
-        parte.set_payload(f.read())
-        encoders.encode_base64(parte)
-        parte.add_header(
-            "Content-Disposition", 'attachment; filename="pedido_whatsapp.pdf"'
-        )
-        msg.attach(parte)
+    with open(pdf_path, "rb") as f:
+      parte = MIMEBase("application", "octet-stream")
+      parte.set_payload(f.read())
+      encoders.encode_base64(parte)
+      parte.add_header(
+          "Content-Disposition", 'attachment; filename="pedido_whatsapp.pdf"'
+      )
+      msg.attach(parte)
 
-      server.sendmail(remetente, destinatario, msg.as_string())
-    server.quit()
-  except Exception as e:
-    print(f"Erro no envio de e-mail automático: {e}")
+    server.sendmail(remetente, destinatario, msg.as_string())
+  server.quit()
 
 
 @app.route("/webhook-whatsapp", methods=["POST"])
@@ -331,6 +325,7 @@ def receber_mensagem():
     else:
       return jsonify({"status": "erro", "detalhe": msg_retorno}), 400
   except Exception as e:
+    # Se houver qualquer erro no e-mail ou PDF, ele aparece na resposta do teste!
     return jsonify({"status": "erro", "detalhe": str(e)}), 500
 
 
