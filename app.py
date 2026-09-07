@@ -46,6 +46,14 @@ def salvar_cliente(telefone, nome, endereco, email, obs):
     with open(ARQUIVO_CLIENTES, "w", encoding="utf-8") as f:
         json.dump(clientes, f, ensure_ascii=False, indent=4)
 
+# Função para limpar emojis e garantir compatibilidade com o PDF (evita UnicodeEncodeException)
+def limpar_texto_pdf(texto):
+    if not texto:
+        return ""
+    # Remove emojis e caracteres fora do padrão latin-1/ascii se necessário
+    texto_limpo = re.sub(r'[^\w\s\-\(\)\.,/:;áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]', '', str(texto))
+    return texto_limpo.strip()
+
 # Opções padronizadas + Opção livre
 op_maturacao = ["Normal", "Mais verde", "Mais maduro"]
 op_peso_kg = ["1 KG", "2 KG", "3 KG", "Meio KG (500 gr)", "Unidade", "✏️ Outra quantidade (Digitar livremente)"]
@@ -273,7 +281,7 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
-# Novo Interpretador Dinâmico Completo para WhatsApp
+# Motor Dinâmico e Robusto para Mensagens do WhatsApp
 def importar_texto_whatsapp(texto):
     linhas = texto.strip().split("\n")
     
@@ -289,84 +297,81 @@ def importar_texto_whatsapp(texto):
         if not linha_inf:
             continue
             
-        if any(w in linha_inf for w in ["hj", "hoje", "manhã", "manha", "entrega", "mandar", "por favor"]):
-            if len(linha_inf) > 8:
+        if any(w in linha_inf for w in ["bom dia", "boa tarde", "boa noite", "olá", "ola", "p hj", "para hoje", "por favor", "favor"]):
+            if len(linha_inf) > 15:
                 st.session_state.cliente_obs = linha.strip()
             continue
             
         produto_encontrado = None
         
-        # Mapeamento completo e flexível de termos
         if "limão" in linha_inf or "limao" in linha_inf:
-            produto_encontrado = "🍋 LIMÃO TAITI"
+            produto_encontrado = "LIMÃO TAITI"
         elif "abacaxi" in linha_inf:
-            produto_encontrado = "🍍 ABACAXI PÉROLA"
+            produto_encontrado = "ABACAXI PÉROLA"
         elif "morango" in linha_inf:
-            produto_encontrado = "🍓 MORANGO"
+            produto_encontrado = "MORANGO"
         elif "manga" in linha_inf:
-            produto_encontrado = "🥭 MANGA PALMER"
+            produto_encontrado = "MANGA PALMER"
         elif "pepino" in linha_inf:
-            produto_encontrado = "🥒 PEPINO JAPONÊS"
+            produto_encontrado = "PEPINO JAPONÊS"
         elif "tomate cereja" in linha_inf:
-            produto_encontrado = "🍅 TOMATE CEREJA"
+            produto_encontrado = "TOMATE CEREJA"
         elif "tomate" in linha_inf:
-            produto_encontrado = "🍅 TOMATE SALADA"
+            produto_encontrado = "TOMATE SALADA"
         elif "couve flor" in linha_inf or "couve-flor" in linha_inf:
-            produto_encontrado = "🥦 COUVE-FLOR"
+            produto_encontrado = "COUVE-FLOR"
         elif "couve" in linha_inf:
-            produto_encontrado = "🥬 COUVE"
+            produto_encontrado = "COUVE"
         elif "jiló" in linha_inf or "jilo" in linha_inf:
-            produto_encontrado = "🟢 JILÓ"
+            produto_encontrado = "JILÓ"
         elif "quiabo" in linha_inf:
-            produto_encontrado = "🟢 QUIABO"
+            produto_encontrado = "QUIABO"
         elif "ervilha" in linha_inf:
-            produto_encontrado = "🫛 ERVILHA DEBULHADA CONGELADA"
+            produto_encontrado = "ERVILHA DEBULHADA CONGELADA"
         elif "salsinha" in linha_inf or "salsa" in linha_inf:
-            produto_encontrado = "🌿 SALSA"
+            produto_encontrado = "SALSA"
         elif "agrião" in linha_inf or "agriao" in linha_inf:
-            produto_encontrado = "🌿 AGRIÃO"
+            produto_encontrado = "AGRIÃO"
         elif "rúcula" in linha_inf or "rucula" in linha_inf:
-            produto_encontrado = "🌿 RÚCULA"
+            produto_encontrado = "RÚCULA"
         elif "repolho" in linha_inf:
-            produto_encontrado = "🥬 REPOLHO"
+            produto_encontrado = "REPOLHO"
         elif "banana" in linha_inf:
-            produto_encontrado = "🍌 BANANA PRATA"
+            produto_encontrado = "BANANA PRATA"
         elif "goiaba" in linha_inf:
-            produto_encontrado = "🍐 GOIABA"
+            produto_encontrado = "GOIABA"
         elif "pêra" in linha_inf or "pera" in linha_inf:
-            produto_encontrado = "🍐 PERA"
+            produto_encontrado = "PERA"
         elif "mamão" in linha_inf or "mamao" in linha_inf:
-            produto_encontrado = "🍈 MAMÃO FORMOSA"
+            produto_encontrado = "MAMÃO FORMOSA"
         elif "maçã" in linha_inf or "maca" in linha_inf:
-            produto_encontrado = "🍎 MAÇÃ NACIONAL GALA"
+            produto_encontrado = "MAÇÃ NACIONAL GALA"
         elif "cebola" in linha_inf:
-            produto_encontrado = "🧅 CEBOLA"
+            produto_encontrado = "CEBOLA"
         elif "alho" in linha_inf:
-            produto_encontrado = "🧄 ALHO"
+            produto_encontrado = "ALHO"
         elif "mandioquinha" in linha_inf:
-            produto_encontrado = "🥕 MANDIOQUINHA"
+            produto_encontrado = "MANDIOQUINHA"
         elif "cenoura" in linha_inf:
-            produto_encontrado = "🥕 CENOURA"
+            produto_encontrado = "CENOURA"
         elif "batata" in linha_inf:
-            produto_encontrado = "🥔 BATATA LAVADA"
+            produto_encontrado = "BATATA LAVADA"
         elif "cheiro verde" in linha_inf:
-            produto_encontrado = "🌿 CHEIRO VERDE"
+            produto_encontrado = "CHEIRO VERDE"
         elif "beterraba" in linha_inf:
-            produto_encontrado = "🟣 BETERRABA"
+            produto_encontrado = "BETERRABA"
             
         if produto_encontrado:
             nums = re.findall(r'\d+', linha_inf)
             qtd_num = nums[0] if nums else "1"
             
             if "dz" in linha_inf or "dúzia" in linha_inf:
-                q_str = f"{qtd_num} Caixa(s) com 12 (Dúzia)" if "limão" in linha_inf or "limao" in linha_inf else f"Caixa com 12 (Dúzia)"
-                if "dz" in linha_inf and int(qtd_num) > 1 and "limão" in linha_inf:
-                    q_str = f"{qtd_num} Dúzias"
+                q_str = f"{qtd_num} Dúzia(s)" if int(qtd_num) > 1 else "Caixa com 12 (Dúzia)"
             elif "cx" in linha_inf or "caixa" in linha_inf:
-                q_str = f"{qtd_num} Bandeja(s)" if "morango" in linha_inf else f"{qtd_num} Caixas"
+                q_str = f"{qtd_num} Caixa(s)"
             elif "k" in linha_inf or "kg" in linha_inf:
                 q_str = f"{qtd_num} KG"
-            elif produto_encontrado in ["🌿 CHEIRO VERDE", "🥬 COUVE", "🌿 AGRIÃO", "🌿 RÚCULA"]:
+            elif produto_encontrado in ["CHEIRO VERDE", "COUVE", "AGRIÃO", "RÚCULA", "REPOLHO"]:
                 q_str = f"{qtd_num} Unidade(s)"
             else:
                 q_str = f"{qtd_num} Unidades"
@@ -427,13 +432,13 @@ if st.session_state.etapa == "revisao":
     pdf.set_fill_color(245, 247, 246)
     
     data_atual = datetime.now().strftime("%d/%m/%Y")
-    pdf.cell(150, 6, f" CLIENTE: {st.session_state.cliente_nome}", 1, 0, "L", fill=True)
+    pdf.cell(150, 6, limpiar_texto_pdf(f" CLIENTE: {st.session_state.cliente_nome}"), 1, 0, "L", fill=True)
     pdf.cell(40, 6, f" DATA: {data_atual}", 1, 1, "L", fill=True)
     
-    pdf.cell(190, 6, f" ENDEREÇO: {st.session_state.cliente_end}", 1, 1, "L", fill=True)
-    pdf.cell(100, 6, f" FONE: {st.session_state.cliente_tel}", 1, 0, "L", fill=True)
-    pdf.cell(90, 6, f" E-MAIL: {st.session_state.cliente_email if st.session_state.cliente_email else '-'}", 1, 1, "L", fill=True)
-    pdf.cell(190, 6, f" OBS: {st.session_state.cliente_obs if st.session_state.cliente_obs else '-'}", 1, 1, "L", fill=True)
+    pdf.cell(190, 6, limpiar_texto_pdf(f" ENDEREÇO: {st.session_state.cliente_end}"), 1, 1, "L", fill=True)
+    pdf.cell(100, 6, limpiar_texto_pdf(f" FONE: {st.session_state.cliente_tel}"), 1, 0, "L", fill=True)
+    pdf.cell(90, 6, limpiar_texto_pdf(f" E-MAIL: {st.session_state.cliente_email if st.session_state.cliente_email else '-'}"), 1, 1, "L", fill=True)
+    pdf.cell(190, 6, limpiar_texto_pdf(f" OBS: {st.session_state.cliente_obs if st.session_state.cliente_obs else '-'}"), 1, 1, "L", fill=True)
     pdf.ln(6)
 
     pdf.set_fill_color(30, 61, 47)
@@ -453,14 +458,14 @@ if st.session_state.etapa == "revisao":
         else:
             pdf.set_fill_color(255, 255, 255)
         
-        pdf.cell(100, 6, f"  {p}", 1, 0, "L", fill=True)
-        pdf.cell(50, 6, f"{q}", 1, 0, "C", fill=True)
+        pdf.cell(100, 6, limpiar_texto_pdf(f"  {p}"), 1, 0, "L", fill=True)
+        pdf.cell(50, 6, limpiar_texto_pdf(f"{q}"), 1, 0, "C", fill=True)
         pdf.cell(40, 6, "R$ ________", 1, 1, "C", fill=True)
         fill_toggle = not fill_toggle
 
     pdf.ln(10)
     pdf.set_font("Arial", "I", 9)
-    pdf.cell(0, 6, "Agradecemos a preferência! Banca do Mané - Qualidade e Tradição.", 0, 1, "C")
+    pdf.cell(0, 6, "Agradecemos a preferencia! Banca do Mane - Qualidade e Tradicao.", 0, 1, "C")
 
     tmp_dir = tempfile.gettempdir()
     pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
