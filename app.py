@@ -273,46 +273,61 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
-# Interpretador Aprimorado para Texto Livre do WhatsApp
+# Interpretador Aprimorado com Preenchimento Automático de Dados Fictícios
 def importar_texto_whatsapp(texto):
     linhas = texto.strip().split("\n")
     
-    mapeamento_direto = {
-        "banana": "BANANA PRATA",
-        "goiaba": "GOIABA",
-        "pêra": "PERA",
-        "pera": "PERA",
-        "mamão": "MAMÃO FORMOSA",
-        "mamao": "MAMÃO FORMOSA",
-        "manga": "MANGA PALMER",
-        "maçã": "MAÇÃ NACIONAL GALA",
-        "maca": "MAÇÃ NACIONAL GALA",
-        "cebola": "CEBOLA",
-        "alho": "ALHO",
-        "tomate cereja": "TOMATE CEREJA",
-        "tomate": "TOMATE SALADA",
-        "mandioquinha": "MANDIOQUINHA",
-        "cenoura": "CENOURA",
-        "batata": "BATATA LAVADA",
-        "cheiro verde": "CHEIRO VERDE",
-        "beterraba": "BETERRABA"
-    }
-
+    # Preenche dados padrão automáticos caso estejam vazios
+    if not st.session_state.cliente_nome:
+        st.session_state.cliente_nome = "Cliente WhatsApp"
+    if not st.session_state.cliente_end:
+        st.session_state.cliente_end = "Mercado Municipal (Retirada / Entrega WhatsApp)"
+    if not st.session_state.cliente_tel:
+        st.session_state.cliente_tel = "(35) 99999-9999" # Telefone fictício padrão
+        
     for linha in linhas:
         linha_inf = linha.lower().strip()
         if not linha_inf:
             continue
             
-        if "manhã" in linha_inf or "manha" in linha_inf or "entrega" in linha_inf:
+        # Captura observações de entrega
+        if "manhã" in linha_inf or "manha" in linha_inf or "entrega" in linha_inf or "mandar" in linha_inf:
             st.session_state.cliente_obs = linha.strip()
             continue
             
         produto_encontrado = None
-        for chave, nome_catalogo in mapeamento_direto.items():
-            if chave in linha_inf:
-                produto_encontrado = nome_catalogo
-                break
-                
+        
+        if "tomate cereja" in linha_inf:
+            produto_encontrado = "🍅 TOMATE CEREJA"
+        elif "tomate" in linha_inf:
+            produto_encontrado = "🍅 TOMATE SALADA"
+        elif "banana" in linha_inf:
+            produto_encontrado = "🍌 BANANA PRATA"
+        elif "goiaba" in linha_inf:
+            produto_encontrado = "🍐 GOIABA"
+        elif "pêra" in linha_inf or "pera" in linha_inf:
+            produto_encontrado = "🍐 PERA"
+        elif "mamão" in linha_inf or "mamao" in linha_inf:
+            produto_encontrado = "🍈 MAMÃO FORMOSA"
+        elif "manga" in linha_inf:
+            produto_encontrado = "🥭 MANGA PALMER"
+        elif "maçã" in linha_inf or "maca" in linha_inf:
+            produto_encontrado = "🍎 MAÇÃ NACIONAL GALA"
+        elif "cebola" in linha_inf:
+            produto_encontrado = "🧅 CEBOLA"
+        elif "alho" in linha_inf:
+            produto_encontrado = "🧄 ALHO"
+        elif "mandioquinha" in linha_inf:
+            produto_encontrado = "🥕 MANDIOQUINHA"
+        elif "cenoura" in linha_inf:
+            produto_encontrado = "🥕 CENOURA"
+        elif "batata" in linha_inf:
+            produto_encontrado = "🥔 BATATA LAVADA"
+        elif "cheiro verde" in linha_inf:
+            produto_encontrado = "🌿 CHEIRO VERDE"
+        elif "beterraba" in linha_inf:
+            produto_encontrado = "🟣 BETERRABA"
+            
         if produto_encontrado:
             nums = re.findall(r'\d+', linha_inf)
             qtd_num = nums[0] if nums else "1"
@@ -331,6 +346,8 @@ def importar_texto_whatsapp(texto):
                 q_str = f"Meio KG (500 gr){maturacao_sufixo}"
             elif "k" in linha_inf:
                 q_str = f"{qtd_num} KG{maturacao_sufixo}"
+            elif produto_encontrado == "🌿 CHEIRO VERDE":
+                q_str = "Unidade"
             else:
                 q_str = f"{qtd_num} Unidades{maturacao_sufixo}"
                 
@@ -416,8 +433,7 @@ if st.session_state.etapa == "revisao":
         else:
             pdf.set_fill_color(255, 255, 255)
         
-        nome_limpo = p.split(" ", 1)[1] if " " in p else p
-        pdf.cell(100, 6, f"  {nome_limpo}", 1, 0, "L", fill=True)
+        pdf.cell(100, 6, f"  {p}", 1, 0, "L", fill=True)
         pdf.cell(50, 6, f"{q}", 1, 0, "C", fill=True)
         pdf.cell(40, 6, "R$ ________", 1, 1, "C", fill=True)
         fill_toggle = not fill_toggle
@@ -502,7 +518,7 @@ else:
             if st.button("Converter em Pedido", use_container_width=True):
                 if texto_wpp.strip():
                     importar_texto_whatsapp(texto_wpp)
-                    st.success("Itens importados com sucesso!")
+                    st.success("Itens e dados preenchidos com sucesso!")
                     st.rerun()
                 else:
                     st.warning("Cole o texto do pedido primeiro.")
