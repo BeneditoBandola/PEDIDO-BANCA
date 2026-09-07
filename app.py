@@ -22,6 +22,29 @@ st.markdown("<h1 style='text-align: center; color: #1e3d2f;'>🍌 Banca do Mané
 st.markdown("<p style='text-align: center; color: #555;'>Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# Funções de Gerenciamento de Clientes (JSON)
+ARQUIVO_CLIENTES = "clientes.json"
+
+def carregar_clientes():
+    if os.path.exists(ARQUIVO_CLIENTES):
+        try:
+            with open(ARQUIVO_CLIENTES, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def salvar_cliente(telefone, nome, endereco, email, obs):
+    clientes = carregar_clientes()
+    clientes[telefone] = {
+        "nome": nome,
+        "endereco": endereco,
+        "email": email,
+        "obs": obs
+    }
+    with open(ARQUIVO_CLIENTES, "w", encoding="utf-8") as f:
+        json.dump(clientes, f, ensure_ascii=False, indent=4)
+
 # Opções padronizadas + Opção livre
 op_maturacao = ["Normal", "Mais verde", "Mais maduro"]
 op_peso_kg = ["1 KG", "2 KG", "3 KG", "Meio KG (500 gr)", "Unidade", "✏️ Outra quantidade (Digitar livremente)"]
@@ -166,12 +189,12 @@ catalogo = {
 # Inicializa estados na sessão
 if "carrinho" not in st.session_state:
     st.session_state.carrinho = {}
+if "cliente_tel" not in st.session_state:
+    st.session_state.cliente_tel = ""
 if "cliente_nome" not in st.session_state:
     st.session_state.cliente_nome = ""
 if "cliente_end" not in st.session_state:
     st.session_state.cliente_end = ""
-if "cliente_tel" not in st.session_state:
-    st.session_state.cliente_tel = ""
 if "cliente_email" not in st.session_state:
     st.session_state.cliente_email = ""
 if "cliente_obs" not in st.session_state:
@@ -213,8 +236,8 @@ def enviar_email_banca(pdf_path, cliente_nome):
     
     # ====================================================
     # COLOQUE SEU E-MAIL DO GMAIL E A SENHA DE APP AQUI:
-    remetente = "beneditobandola@gmail.com"
-    senha_app = "gegh benf khmt zhyn"
+    remetente = "SEU_EMAIL_AQUI@gmail.com"
+    senha_app = "SUA_SENHA_DE_16_DIGITOS"
     # ====================================================
     
     destinatario = "andreiabolzanmenezes@gmail.com"
@@ -339,7 +362,6 @@ if st.session_state.etapa == "revisao":
     pdf_path = os.path.join(tmp_dir, "pedido_banca_do_mane.pdf")
     pdf.output(pdf_path)
 
-    # Dispara o e-mail automaticamente em background para a banca
     enviar_email_banca(pdf_path, st.session_state.cliente_nome)
 
     st.success("🎉 Pedido enviado com sucesso para a Banca do Mané!")
@@ -402,7 +424,7 @@ else:
 
         st.markdown("<hr style='margin: 5px 0px; border-color: #eee;'>", unsafe_allow_html=True)
 
-    # --- BARRA LATERAL: CARRINHO E DADOS DE ENTREGA ---
+    # --- BARRA LATERAL: CARRINHO E CADASTRO INTELIGENTE ---
     with st.sidebar:
         st.header("🛒 Seu Carrinho")
         
@@ -423,26 +445,41 @@ else:
                 st.rerun()
                 
             st.divider()
-            st.subheader("👤 Seus Dados (Cadastro)")
-            st.markdown("<small>Preencha para realizar o pedido.</small>", unsafe_allow_html=True)
+            st.subheader("👤 Identificação do Cliente")
+            st.markdown("<small>Digite seu telefone para carregar seus dados ou cadastrar:</small>", unsafe_allow_html=True)
             
+            # Campo de telefone que ativa o preenchimento automático via JSON
+            telefone_digitado = st.text_input("Telefone (WhatsApp):", value=st.session_state.cliente_tel)
+            
+            if telefone_digitado != st.session_state.cliente_tel:
+                st.session_state.cliente_tel = telefone_digitado
+                # Verifica se o cliente já existe no JSON
+                clientes_cadastrados = carregar_clientes()
+                if telefone_digitado in clientes_cadastrados:
+                    dados = clientes_cadastrados[telefone_digitado]
+                    st.session_state.cliente_nome = dados.get("nome", "")
+                    st.session_state.cliente_end = dados.get("endereco", "")
+                    st.session_state.cliente_email = dados.get("email", "")
+                    st.session_state.cliente_obs = dados.get("obs", "")
+                    st.rerun()
+
             nome = st.text_input("Seu Nome:", value=st.session_state.cliente_nome)
             endereco = st.text_input("Endereço e Bairro:", value=st.session_state.cliente_end)
-            telefone = st.text_input("Telefone:", value=st.session_state.cliente_tel)
             email = st.text_input("E-mail (Opcional):", value=st.session_state.cliente_email)
             observacao = st.text_area("Observações (Troco, portão, etc.):", value=st.session_state.cliente_obs)
             
             st.session_state.cliente_nome = nome
             st.session_state.cliente_end = endereco
-            st.session_state.cliente_tel = telefone
             st.session_state.cliente_email = email
             st.session_state.cliente_obs = observacao
             
             st.divider()
             
             if st.button("📦 Fechar e Enviar Pedido", type="primary", use_container_width=True):
-                if not nome or not endereco or not telefone:
-                    st.error("Preencha Nome, Endereço e Telefone!")
+                if not nome or not endereco or not telefone_digitado:
+                    st.error("Preencha Telefone, Nome e Endereço!")
                 else:
+                    # Salva ou atualiza os dados do cliente no JSON de cadastros
+                    salvar_cliente(telefone_digitado, nome, endereco, email, observacao)
                     st.session_state.etapa = "revisao"
                     st.rerun()
