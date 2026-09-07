@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+import re
 
 st.set_page_config(
     page_title="Banca do Mané - Fazer Pedido",
@@ -268,43 +269,38 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
-# Interpretador Inteligente para Texto Livre do WhatsApp
+# Interpretador Aprimorado para Texto Livre do WhatsApp
 def importar_texto_whatsapp(texto):
     linhas = texto.strip().split("\n")
     
     mapeamento_direto = {
-        "maçã": "MAÇÃ NACIONAL GALA",
-        "maca": "MAÇÃ NACIONAL GALA",
-        "alface americano": "ALFACE AMERICANA",
-        "alface": "ALFACE CRESPA",
-        "milho": "MILHO VERDE",
-        "ponkan": "MEXERICA POKÃ",
-        "mandioca": "MANDIOCA DESCASCADA CONGELADA",
+        "banana": "BANANA PRATA",
+        "goiaba": "GOIABA",
+        "pêra": "PERA",
+        "pera": "PERA",
         "mamão": "MAMÃO FORMOSA",
         "mamao": "MAMÃO FORMOSA",
-        "rúcula": "RÚCULA",
-        "rucula": "RÚCULA",
-        "banana prata": "BANANA PRATA",
-        "banana": "BANANA PRATA",
-        "batata doce": "BATATA DOCE",
-        "beterraba": "BETERRABA",
-        "berinjela": "BERINGELA",
-        "beringela": "BERINGELA",
+        "manga": "MANGA PALMER",
+        "maçã": "MAÇÃ NACIONAL GALA",
+        "maca": "MAÇÃ NACIONAL GALA",
         "cebola": "CEBOLA",
-        "salsinha": "SALSA",
-        "salsa": "SALSA",
-        "laranja lima": "LARANJA LIMA",
-        "laranja": "LARANJA PERA",
-        "abacaxi": "ABACAXI PÉROLA",
-        "gengibre": "GENGIBRE",
-        "feijão": "FEIJÃO CARIOQUINHA",
-        "feijao": "FEIJÃO CARIOQUINHA"
+        "alho": "ALHO",
+        "tomate cereja": "TOMATE CEREJA",
+        "tomate": "TOMATE SALADA",
+        "mandioquinha": "MANDIOQUINHA",
+        "cenoura": "CENOURA",
+        "batata": "BATATA LAVADA",
+        "cheiro verde": "CHEIRO VERDE",
+        "beterraba": "BETERRABA"
     }
 
-    import re
     for linha in linhas:
         linha_inf = linha.lower().strip()
         if not linha_inf:
+            continue
+            
+        if "manhã" in linha_inf or "manha" in linha_inf or "entrega" in linha_inf:
+            st.session_state.cliente_obs = linha.strip()
             continue
             
         produto_encontrado = None
@@ -314,20 +310,26 @@ def importar_texto_whatsapp(texto):
                 break
                 
         if produto_encontrado:
-            q_str = "1 KG"
-            if "1/2" in linha_inf or "meio" in linha_inf or "1/2" in linha:
-                q_str = "Meio KG (500 gr)"
-            elif "dz" in linha_inf or "dúzia" in linha_inf:
-                q_str = "Caixa com 12 (Dúzia)" if "ovo" in produto_encontrado.lower() else "Unidade"
-            elif any(num in linha_inf for num in ["6", "12", "2", "3", "4", "5", "10"]):
-                nums = re.findall(r'\d+', linha_inf)
-                num_val = nums[0] if nums else "1"
-                q_str = f"{num_val} Unidades"
-            elif "bandeja" in linha_inf:
-                q_str = "Bandeja"
-            elif "k" in linha_inf:
-                q_str = "1 KG"
+            nums = re.findall(r'\d+', linha_inf)
+            qtd_num = nums[0] if nums else "1"
             
+            maturacao_sufixo = ""
+            if "madur" in linha_inf or "consumo" in linha_inf:
+                maturacao_sufixo = " (Mais maduro)"
+            elif "verde" in linha_inf:
+                maturacao_sufixo = " (Mais verde)"
+                
+            if "dz" in linha_inf or "dúzia" in linha_inf:
+                q_str = f"Caixa com 12 (Dúzia){maturacao_sufixo}"
+            elif "300 g" in linha_inf or "300g" in linha_inf:
+                q_str = f"300 gr{maturacao_sufixo}"
+            elif "1/2" in linha_inf or "meio" in linha_inf:
+                q_str = f"Meio KG (500 gr){maturacao_sufixo}"
+            elif "k" in linha_inf:
+                q_str = f"{qtd_num} KG{maturacao_sufixo}"
+            else:
+                q_str = f"{qtd_num} Unidades{maturacao_sufixo}"
+                
             st.session_state.carrinho[produto_encontrado] = q_str
 
 # --- TELA 2: TELA DE REVISÃO E ENVIO AUTOMÁTICO ---
@@ -492,7 +494,7 @@ else:
         
         with st.expander("📲 Importar Pedido do WhatsApp"):
             st.markdown("<small>Cole a lista enviada pelo cliente abaixo:</small>", unsafe_allow_html=True)
-            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="1k maçã\n1 alface americano\n6 ponkan...", label_visibility="collapsed")
+            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="1dz de banana BEM madura...\n4 goiabas maduras...", label_visibility="collapsed")
             if st.button("Converter em Pedido", use_container_width=True):
                 if texto_wpp.strip():
                     importar_texto_whatsapp(texto_wpp)
