@@ -231,17 +231,17 @@ def salvar_historico_json():
         json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
 def enviar_email_banca(pdf_path, cliente_nome):
-    """Envia o PDF do pedido automaticamente para os e-mails da banca"""
+    """Envia o PDF do pedido automaticamente para os e-mails da banca usando Secrets"""
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     
-    # ====================================================
-    # COLOQUE SEU E-MAIL DO GMAIL E A SENHA DE APP AQUI:
-    remetente = "SEU_EMAIL_AQUI@gmail.com"
-    senha_app = "SUA_SENHA_DE_16_DIGITOS"
-    # ====================================================
+    try:
+        remetente = st.secrets["email"]["remetente"]
+        senha_app = st.secrets["email"]["senha_app"]
+    except Exception as e:
+        st.error("Erro: Credenciais de e-mail não configuradas nos Secrets do Streamlit.")
+        return False
     
-    # Lista com os e-mails que vão receber o pedido simultaneamente
     destinatarios = ["andreiabolzanmenezes@gmail.com", "beneditobandola@gmail.com"]
     
     try:
