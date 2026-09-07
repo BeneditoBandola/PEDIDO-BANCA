@@ -46,11 +46,10 @@ def salvar_cliente(telefone, nome, endereco, email, obs):
     with open(ARQUIVO_CLIENTES, "w", encoding="utf-8") as f:
         json.dump(clientes, f, ensure_ascii=False, indent=4)
 
-# Função para limpar emojis e garantir compatibilidade com o PDF (evita UnicodeEncodeException)
+# Função para limpar emojis e garantir compatibilidade com o PDF
 def limpar_texto_pdf(texto):
     if not texto:
         return ""
-    # Remove emojis e caracteres fora do padrão latin-1/ascii se necessário
     texto_limpo = re.sub(r'[^\w\s\-\(\)\.,/:;áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]', '', str(texto))
     return texto_limpo.strip()
 
@@ -432,13 +431,13 @@ if st.session_state.etapa == "revisao":
     pdf.set_fill_color(245, 247, 246)
     
     data_atual = datetime.now().strftime("%d/%m/%Y")
-    pdf.cell(150, 6, limpiar_texto_pdf(f" CLIENTE: {st.session_state.cliente_nome}"), 1, 0, "L", fill=True)
+    pdf.cell(150, 6, limpar_texto_pdf(f" CLIENTE: {st.session_state.cliente_nome}"), 1, 0, "L", fill=True)
     pdf.cell(40, 6, f" DATA: {data_atual}", 1, 1, "L", fill=True)
     
-    pdf.cell(190, 6, limpiar_texto_pdf(f" ENDEREÇO: {st.session_state.cliente_end}"), 1, 1, "L", fill=True)
-    pdf.cell(100, 6, limpiar_texto_pdf(f" FONE: {st.session_state.cliente_tel}"), 1, 0, "L", fill=True)
-    pdf.cell(90, 6, limpiar_texto_pdf(f" E-MAIL: {st.session_state.cliente_email if st.session_state.cliente_email else '-'}"), 1, 1, "L", fill=True)
-    pdf.cell(190, 6, limpiar_texto_pdf(f" OBS: {st.session_state.cliente_obs if st.session_state.cliente_obs else '-'}"), 1, 1, "L", fill=True)
+    pdf.cell(190, 6, limpar_texto_pdf(f" ENDEREÇO: {st.session_state.cliente_end}"), 1, 1, "L", fill=True)
+    pdf.cell(100, 6, limpar_texto_pdf(f" FONE: {st.session_state.cliente_tel}"), 1, 0, "L", fill=True)
+    pdf.cell(90, 6, limpar_texto_pdf(f" E-MAIL: {st.session_state.cliente_email if st.session_state.cliente_email else '-'}"), 1, 1, "L", fill=True)
+    pdf.cell(190, 6, limpar_texto_pdf(f" OBS: {st.session_state.cliente_obs if st.session_state.cliente_obs else '-'}"), 1, 1, "L", fill=True)
     pdf.ln(6)
 
     pdf.set_fill_color(30, 61, 47)
