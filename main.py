@@ -8,7 +8,7 @@ import os
 import re
 import smtplib
 import tempfile
-import threading  # Importado para disparar o e-mail em segundo plano
+import threading
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -133,7 +133,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   if not carrinho:
     return False, "Nenhum produto identificado."
 
-  # Numeração Sequencial
   data_hoje = datetime.now().strftime("%d/%m/%Y")
   dados_existentes = []
   if os.path.exists(ARQUIVO_HISTORICO):
@@ -165,7 +164,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   with open(ARQUIVO_HISTORICO, "w", encoding="utf-8") as f:
     json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
-  # Geração do PDF
   class PDF(FPDF):
 
     def header(self):
@@ -256,7 +254,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   pdf_path = os.path.join(tmp_dir, f"pedido_whatsapp.pdf")
   pdf.output(pdf_path)
 
-  # Dispara o e-mail em uma thread separada para não travar a resposta HTTP
+  # Dispara o e-mail em background
   threading.Thread(
       target=enviar_email_automatico, args=(pdf_path, codigo_pedido)
   ).start()
@@ -305,26 +303,34 @@ def enviar_email_automatico(pdf_path, codigo_pedido):
 
 @app.route("/webhook-whatsapp", methods=["POST"])
 def receber_mensagem():
-  dados = request.json
-  if not dados:
-    return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 400
+  try:
+    dados = request.get_json(silent=True)
+    if not dados:
+      return (
+          jsonify(
+              {"status": "erro", "detalhe": "JSON inválido ou ausente"}
+          ),
+          400,
+      )
 
-  texto = dados.get("mensagem", "")
-  remetente = dados.get("remetente", "Cliente WhatsApp")
+    texto = dados.get("mensagem", "")
+    remetente = dados.get("telefone", "Cliente WhatsApp")
 
-  if not texto:
-    return (
-        jsonify(
-            {"status": "erro", "detalhe": "Nenhuma mensagem encontrada"}
-        ),
-        400,
-    )
+    if not texto:
+      return (
+          jsonify(
+              {"status": "erro", "detalhe": "Campo mensagem não encontrado"}
+          ),
+          400,
+      )
 
-  sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
-  if sucesso:
-    return jsonify({"status": "sucesso", "pedido": msg_retorno}), 200
-  else:
-    return jsonify({"status": "erro", "detalhe": msg_retorno}), 400
+    sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, str(remetente))
+    if sucesso:
+      return jsonify({"status": "sucesso", "pedido": msg_retorno}), 200
+    else:
+      return jsonify({"status": "erro", "detalhe": msg_retorno}), 400
+  except Exception as e:
+    return jsonify({"status": "erro", "detalhe": str(e)}), 500
 
 
 if __name__ == "__main__":
