@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import json
+json_module = json = __import__('json')
 from fpdf import FPDF
 import tempfile
 import os
@@ -268,6 +268,48 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
+# Função simples para interpretar texto livre do WhatsApp e jogar no carrinho
+def importar_texto_whatsapp(texto):
+    linhas = texto.strip().split("\n")
+    # Cria uma lista plana de todos os produtos do catálogo para correspondência
+    todos_produtos = []
+    for categoria in catalogo.values():
+        for item in categoria:
+            todos_produtos.append(item[0])
+            
+    import re
+    for linha in linhas:
+        linha_limpa = linha.strip()
+        if not linha_limpa:
+            continue
+            
+        # Tenta achar qual produto corresponde ao texto
+        produto_encontrado = None
+        for p in todos_produtos:
+            # Pega o nome base do produto sem o emoji
+            nome_base = p.split(" ", 1)[1] if " " in p else p
+            if nome_base.lower() in linha_limpa.lower() or p.lower() in linha_limpa.lower():
+                produto_encontrado = p
+                break
+                
+        if produto_encontrado:
+            # Extrai quantidade se houver (ex: "6 ponkan", "1k maçã", "1/2 beterraba")
+            qtd_match = re.search(r'^([\d\/\b]+(?:k|dz|g|/)?(?:\s*(?:k|dz|g))?)\b', linha_limpa, re.IGNORECASE)
+            
+            # Tratamento amigável para abreviações comuns
+            q_str = "1 Unidade"
+            if "1k" in linha_limpa.lower() or "1 k" in linha_limpa.lower() or "k " in linha_limpa.lower():
+                q_str = "1 KG"
+            elif "1/2" in linha_limpa.lower() or "meio" in linha_limpa.lower():
+                q_str = "Meio KG (500 gr)"
+            elif "1dz" in linha_limpa.lower() or "dz" in linha_limpa.lower():
+                q_str = "Caixa com 12 (Dúzia)" if "ovo" in produto_encontrado.lower() else "Unidade"
+            elif re.search(r'\b(6|12|2|3|4|5|10)\b', linha_limpa):
+                match_num = re.search(r'\b(6|12|2|3|4|5|10)\b', linha_limpa)
+                q_str = f"{match_num.group(1)} Unidades"
+            
+            st.session_state.carrinho[produto_encontrado] = q_str
+
 # --- TELA 2: TELA DE REVISÃO E ENVIO AUTOMÁTICO ---
 if st.session_state.etapa == "revisao":
     salvar_historico_json()
@@ -424,9 +466,21 @@ else:
 
         st.markdown("<hr style='margin: 5px 0px; border-color: #eee;'>", unsafe_allow_html=True)
 
-    # --- BARRA LATERAL: CARRINHO E CADASTRO INTELIGENTE ---
+    # --- BARRA LATERAL: CARRINHO E CADASTRO INTELIGENTE + IMPORTADOR WHATSAPP ---
     with st.sidebar:
         st.header("🛒 Seu Carrinho")
+        
+        # Bloco de Importação Rápida do WhatsApp
+        with st.expander("📲 Importar Pedido do WhatsApp"):
+            st.markdown("<small>Cole a lista enviada pelo cliente abaixo:</small>", unsafe_allow_html=True)
+            texto_wpp = st.text_area("Texto do WhatsApp", placeholder="1k maçã\n1 alface americano\n6 ponkan...", label_visibility="collapsed")
+            if st.button("Converter em Pedido", use_container_width=True):
+                if texto_wpp.strip():
+                    importar_texto_whatsapp(texto_wpp)
+                    st.success("Itens importados com sucesso!")
+                    st.rerun()
+                else:
+                    st.warning("Cole o texto do pedido primeiro.")
         
         if not st.session_state.carrinho:
             st.info("Nenhum item adicionado ainda.")
@@ -446,14 +500,12 @@ else:
                 
             st.divider()
             st.subheader("👤 Identificação do Cliente")
-            st.markdown("<small>Digite seu telefone para carregar seus dados ou cadastrar:</small>", unsafe_allow_html=True)
+            st.markdown("<small>Digite seu telefone para carregar dados ou cadastrar:</small>", unsafe_allow_html=True)
             
-            # Campo de telefone que ativa o preenchimento automático via JSON
             telefone_digitado = st.text_input("Telefone (WhatsApp):", value=st.session_state.cliente_tel)
             
             if telefone_digitado != st.session_state.cliente_tel:
                 st.session_state.cliente_tel = telefone_digitado
-                # Verifica se o cliente já existe no JSON
                 clientes_cadastrados = carregar_clientes()
                 if telefone_digitado in clientes_cadastrados:
                     dados = clientes_cadastrados[telefone_digitado]
@@ -479,7 +531,6 @@ else:
                 if not nome or not endereco or not telefone_digitado:
                     st.error("Preencha Telefone, Nome e Endereço!")
                 else:
-                    # Salva ou atualiza os dados do cliente no JSON de cadastros
                     salvar_cliente(telefone_digitado, nome, endereco, email, observacao)
                     st.session_state.etapa = "revisao"
                     st.rerun()
