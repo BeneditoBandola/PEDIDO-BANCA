@@ -457,8 +457,8 @@ if st.session_state.etapa == "revisao":
         else:
             pdf.set_fill_color(255, 255, 255)
         
-        pdf.cell(100, 6, limpiar_texto_pdf(f"  {p}"), 1, 0, "L", fill=True)
-        pdf.cell(50, 6, limpiar_texto_pdf(f"{q}"), 1, 0, "C", fill=True)
+        pdf.cell(100, 6, limpar_texto_pdf(f"  {p}"), 1, 0, "L", fill=True)
+        pdf.cell(50, 6, limpar_texto_pdf(f"{q}"), 1, 0, "C", fill=True)
         pdf.cell(40, 6, "R$ ________", 1, 1, "C", fill=True)
         fill_toggle = not fill_toggle
 
