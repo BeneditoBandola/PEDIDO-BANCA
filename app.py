@@ -268,45 +268,65 @@ def enviar_email_banca(pdf_path, cliente_nome):
         print(f"Erro ao enviar e-mail: {e}")
         return False
 
-# Função simples para interpretar texto livre do WhatsApp e jogar no carrinho
+# Interpretador Inteligente para Texto Livre do WhatsApp
 def importar_texto_whatsapp(texto):
     linhas = texto.strip().split("\n")
-    # Cria uma lista plana de todos os produtos do catálogo para correspondência
-    todos_produtos = []
-    for categoria in catalogo.values():
-        for item in categoria:
-            todos_produtos.append(item[0])
-            
+    
+    mapeamento_direto = {
+        "maçã": "MAÇÃ NACIONAL GALA",
+        "maca": "MAÇÃ NACIONAL GALA",
+        "alface americano": "ALFACE AMERICANA",
+        "alface": "ALFACE CRESPA",
+        "milho": "MILHO VERDE",
+        "ponkan": "MEXERICA POKÃ",
+        "mandioca": "MANDIOCA DESCASCADA CONGELADA",
+        "mamão": "MAMÃO FORMOSA",
+        "mamao": "MAMÃO FORMOSA",
+        "rúcula": "RÚCULA",
+        "rucula": "RÚCULA",
+        "banana prata": "BANANA PRATA",
+        "banana": "BANANA PRATA",
+        "batata doce": "BATATA DOCE",
+        "beterraba": "BETERRABA",
+        "berinjela": "BERINGELA",
+        "beringela": "BERINGELA",
+        "cebola": "CEBOLA",
+        "salsinha": "SALSA",
+        "salsa": "SALSA",
+        "laranja lima": "LARANJA LIMA",
+        "laranja": "LARANJA PERA",
+        "abacaxi": "ABACAXI PÉROLA",
+        "gengibre": "GENGIBRE",
+        "feijão": "FEIJÃO CARIOQUINHA",
+        "feijao": "FEIJÃO CARIOQUINHA"
+    }
+
     import re
     for linha in linhas:
-        linha_limpa = linha.strip()
-        if not linha_limpa:
+        linha_inf = linha.lower().strip()
+        if not linha_inf:
             continue
             
-        # Tenta achar qual produto corresponde ao texto
         produto_encontrado = None
-        for p in todos_produtos:
-            # Pega o nome base do produto sem o emoji
-            nome_base = p.split(" ", 1)[1] if " " in p else p
-            if nome_base.lower() in linha_limpa.lower() or p.lower() in linha_limpa.lower():
-                produto_encontrado = p
+        for chave, nome_catalogo in mapeamento_direto.items():
+            if chave in linha_inf:
+                produto_encontrado = nome_catalogo
                 break
                 
         if produto_encontrado:
-            # Extrai quantidade se houver (ex: "6 ponkan", "1k maçã", "1/2 beterraba")
-            qtd_match = re.search(r'^([\d\/\b]+(?:k|dz|g|/)?(?:\s*(?:k|dz|g))?)\b', linha_limpa, re.IGNORECASE)
-            
-            # Tratamento amigável para abreviações comuns
-            q_str = "1 Unidade"
-            if "1k" in linha_limpa.lower() or "1 k" in linha_limpa.lower() or "k " in linha_limpa.lower():
-                q_str = "1 KG"
-            elif "1/2" in linha_limpa.lower() or "meio" in linha_limpa.lower():
+            q_str = "1 KG"
+            if "1/2" in linha_inf or "meio" in linha_inf or "1/2" in linha:
                 q_str = "Meio KG (500 gr)"
-            elif "1dz" in linha_limpa.lower() or "dz" in linha_limpa.lower():
+            elif "dz" in linha_inf or "dúzia" in linha_inf:
                 q_str = "Caixa com 12 (Dúzia)" if "ovo" in produto_encontrado.lower() else "Unidade"
-            elif re.search(r'\b(6|12|2|3|4|5|10)\b', linha_limpa):
-                match_num = re.search(r'\b(6|12|2|3|4|5|10)\b', linha_limpa)
-                q_str = f"{match_num.group(1)} Unidades"
+            elif any(num in linha_inf for num in ["6", "12", "2", "3", "4", "5", "10"]):
+                nums = re.findall(r'\d+', linha_inf)
+                num_val = nums[0] if nums else "1"
+                q_str = f"{num_val} Unidades"
+            elif "bandeja" in linha_inf:
+                q_str = "Bandeja"
+            elif "k" in linha_inf:
+                q_str = "1 KG"
             
             st.session_state.carrinho[produto_encontrado] = q_str
 
@@ -470,7 +490,6 @@ else:
     with st.sidebar:
         st.header("🛒 Seu Carrinho")
         
-        # Bloco de Importação Rápida do WhatsApp
         with st.expander("📲 Importar Pedido do WhatsApp"):
             st.markdown("<small>Cole a lista enviada pelo cliente abaixo:</small>", unsafe_allow_html=True)
             texto_wpp = st.text_area("Texto do WhatsApp", placeholder="1k maçã\n1 alface americano\n6 ponkan...", label_visibility="collapsed")
