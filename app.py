@@ -231,7 +231,7 @@ def salvar_historico_json():
         json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
 def enviar_email_banca(pdf_path, cliente_nome):
-    """Envia o PDF do pedido automaticamente para o e-mail da banca"""
+    """Envia o PDF do pedido automaticamente para os e-mails da banca"""
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
     
@@ -241,28 +241,32 @@ def enviar_email_banca(pdf_path, cliente_nome):
     senha_app = "SUA_SENHA_DE_16_DIGITOS"
     # ====================================================
     
-    destinatario = "andreiabolzanmenezes@gmail.com"
+    # Lista com os e-mails que vão receber o pedido simultaneamente
+    destinatarios = ["andreiabolzanmenezes@gmail.com", "beneditobandola@gmail.com"]
     
     try:
-        msg = MIMEMultipart()
-        msg['From'] = remetente
-        msg['To'] = destinatario
-        msg['Subject'] = f"🛒 Novo Pedido de {cliente_nome} - Banca do Mané"
-        
-        corpo = f"Olá!\n\nUm novo pedido foi realizado no sistema da Banca do Mané pelo cliente {cliente_nome}.\nO comprovante em PDF segue em anexo para separação e conferência.\n\nAtenciosamente,\nSistema Banca do Mané"
-        msg.attach(MIMEText(corpo, 'plain'))
-        
-        with open(pdf_path, "rb") as f:
-            parte = MIMEBase('application', 'octet-stream')
-            parte.set_payload(f.read())
-            encoders.encode_base64(parte)
-            parte.add_header('Content-Disposition', f'attachment; filename="pedido_{cliente_nome.replace(" ", "_")}.pdf"')
-            msg.attach(parte)
-            
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(remetente, senha_app)
-        server.sendmail(remetente, destinatario, msg.as_string())
+        
+        for destinatario in destinatarios:
+            msg = MIMEMultipart()
+            msg['From'] = remetente
+            msg['To'] = destinatario
+            msg['Subject'] = f"🛒 Novo Pedido de {cliente_nome} - Banca do Mané"
+            
+            corpo = f"Olá!\n\nUm novo pedido foi realizado no sistema da Banca do Mané pelo cliente {cliente_nome}.\nO comprovante em PDF segue em anexo para separação e conferência.\n\nAtenciosamente,\nSistema Banca do Mané"
+            msg.attach(MIMEText(corpo, 'plain'))
+            
+            with open(pdf_path, "rb") as f:
+                parte = MIMEBase('application', 'octet-stream')
+                parte.set_payload(f.read())
+                encoders.encode_base64(parte)
+                parte.add_header('Content-Disposition', f'attachment; filename="pedido_{cliente_nome.replace(" ", "_")}.pdf"')
+                msg.attach(parte)
+                
+            server.sendmail(remetente, destinatario, msg.as_string())
+            
         server.quit()
         return True
     except Exception as e:
