@@ -3,6 +3,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from fpdf import FPDF  # <--- Importação que estava faltando!
 import json
 import os
 import re
