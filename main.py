@@ -137,6 +137,11 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   numero_sequencial = len(pedidos_hoje) + 1
   codigo_pedido = f"#{numero_sequencial:02d} / {data_hoje}"
 
+  # --- AQUI ESTÁ O AJUSTE: Formata os itens em formato de lista limpa ---
+  texto_itens_formatado = ""
+  for produto, qtd in carrinho.items():
+    texto_itens_formatado += f"• {qtd} - {produto}\n"
+
   novo_pedido = {
       "codigo": codigo_pedido,
       "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -148,18 +153,17 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   with open(ARQUIVO_HISTORICO, "w", encoding="utf-8") as f:
     json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
-  # Prepara os dados para o Make criar o arquivo PDF nativamente
   webhook_url = os.environ.get("WEBHOOK_MAKE_URL", "")
   if not webhook_url:
     return False, "WEBHOOK_MAKE_URL não configurada no Render."
 
+  # Envia para o Make com os itens já organizados em texto limpo
   payload = {
       "codigo": codigo_pedido,
       "cliente": nome_cliente,
       "observacao": obs_cliente,
-      "itens": carrinho,
+      "itens": texto_itens_formatado.strip(),
       "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-      "pdf_nome": f"pedido_{codigo_pedido.replace('/', '_').replace('#', '').strip()}.pdf",
   }
 
   try:
