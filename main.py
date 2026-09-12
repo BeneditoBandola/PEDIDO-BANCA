@@ -138,7 +138,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, "Nenhum produto identificado na mensagem."
 
   data_hoje = agora_brasilia.strftime("%d/%m/%Y")
-
   dados_existentes = []
   if os.path.exists(ARQUIVO_HISTORICO):
     try:
@@ -211,10 +210,10 @@ def index():
         <title>Banca do Mané - Novo Pedido</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 720px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 11px; }
             .nav a:hover { background: #2c3e50; }
             .nav a.ativo { background: #27ae60; }
             label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
@@ -233,8 +232,9 @@ def index():
             <div class="nav">
                 <a href="/" class="ativo">Novo Pedido</a>
                 <a href="/historico">📜 Histórico</a>
-                <a href="/clientes" style="background: #8e44ad;">👥 Melhores Clientes</a>
-                <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Clientes</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Frequência</a>
+                <a href="/volume" style="background: #d35400;">📈 Volume Vendido</a>
             </div>
             <form method="POST">
                 <label for="cliente">Nome do Cliente / Telefone:</label>
@@ -284,10 +284,10 @@ def historico():
         <title>Banca do Mané - Histórico</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 720px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 11px; }
             .nav a:hover { background: #2c3e50; }
             .nav a.ativo { background: #27ae60; }
             details { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 12px 15px; cursor: pointer; }
@@ -304,8 +304,9 @@ def historico():
             <div class="nav">
                 <a href="/">Novo Pedido</a>
                 <a href="/historico" class="ativo">Histórico</a>
-                <a href="/clientes" style="background: #8e44ad;">👥 Melhores Clientes</a>
-                <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Clientes</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Frequência</a>
+                <a href="/volume" style="background: #d35400;">📈 Volume Vendido</a>
             </div>
 
             {% if historico_pedidos %}
@@ -346,20 +347,16 @@ def clientes():
     except:
       dados_pedidos = []
 
-  # Agrupa e conta os pedidos por cliente
   ranking_clientes = {}
   for p in dados_pedidos:
-    cliente = p.get("cliente", "Cliente Desconhecido").strip()
+    cliente = str(p.get("cliente", "Cliente Desconhecido")).strip()
     if not cliente:
       cliente = "Cliente Desconhecido"
-
     if cliente not in ranking_clientes:
       ranking_clientes[cliente] = {"total_pedidos": 0, "ultimo_pedido": ""}
-
     ranking_clientes[cliente]["total_pedidos"] += 1
     ranking_clientes[cliente]["ultimo_pedido"] = p.get("data_hora", "")
 
-  # Ordena do cliente que mais pediu para o que menos pediu
   clientes_ordenados = sorted(
       ranking_clientes.items(),
       key=lambda x: x[1]["total_pedidos"],
@@ -374,10 +371,10 @@ def clientes():
         <title>Banca do Mané - Melhores Clientes</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-            h2, h3 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
+            .container { max-width: 720px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 11px; }
             .nav a:hover { background: #2c3e50; }
             .nav a.ativo { background: #27ae60; }
             table { width: 100%%; border-collapse: collapse; margin-top: 15px; }
@@ -393,8 +390,9 @@ def clientes():
             <div class="nav">
                 <a href="/">Novo Pedido</a>
                 <a href="/historico">📜 Histórico</a>
-                <a href="/clientes" class="ativo" style="background: #8e44ad;">👥 Melhores Clientes</a>
-                <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
+                <a href="/clientes" class="ativo" style="background: #8e44ad;">👥 Clientes</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Frequência</a>
+                <a href="/volume" style="background: #d35400;">📈 Volume Vendido</a>
             </div>
 
             {% if clientes_ordenados %}
@@ -430,7 +428,7 @@ def clientes():
   )
 
 
-# Rota do Relatório de Vendas
+# Rota do Relatório de Frequência
 @app.route("/relatorio", methods=["GET"])
 def relatorio():
   data_filtro = request.args.get("data", "")
@@ -446,7 +444,7 @@ def relatorio():
     dados_pedidos = [
         p
         for p in dados_pedidos
-        if p.get("data_hora", "").startswith(data_filtro)
+        if str(p.get("data_hora", "")).startswith(data_filtro)
     ]
 
   ranking_produtos = {}
@@ -470,13 +468,13 @@ def relatorio():
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <title>Banca do Mané - Relatório de Vendas</title>
+        <title>Banca do Mané - Relatório de Frequência</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-            h2, h3 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
-            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
+            .container { max-width: 720px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 11px; }
             .nav a:hover { background: #2c3e50; }
             .nav a.ativo { background: #27ae60; }
             .filter-box { background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -500,8 +498,9 @@ def relatorio():
             <div class="nav">
                 <a href="/">Novo Pedido</a>
                 <a href="/historico">📜 Histórico</a>
-                <a href="/clientes" style="background: #8e44ad;">👥 Melhores Clientes</a>
-                <a href="/relatorio" class="ativo" style="background: #2980b9;">📊 Relatório de Vendas</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Clientes</a>
+                <a href="/relatorio" class="ativo" style="background: #2980b9;">📊 Frequência</a>
+                <a href="/volume" style="background: #d35400;">📈 Volume Vendido</a>
             </div>
 
             <form method="GET" class="filter-box">
@@ -555,15 +554,219 @@ def relatorio():
   )
 
 
+# Rota de Volume Vendido com Gráficos e Filtro por Data
+@app.route("/volume", methods=["GET"])
+def volume():
+  data_filtro = request.args.get("data", "")
+  dados_pedidos = []
+  if os.path.exists(ARQUIVO_HISTORICO):
+    try:
+      with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
+        dados_pedidos = json.load(f)
+    except:
+      dados_pedidos = []
+
+  if data_filtro:
+    dados_pedidos = [
+        p
+        for p in dados_pedidos
+        if str(p.get("data_hora", "")).startswith(data_filtro)
+    ]
+
+  # Dicionário para somar quantidades agrupadas por unidade de medida (KG, Caixa, Unidade, etc.)
+  # Ex: {"BATATA LAVADA": {"KG": 45.0, "Unidades": 0}, ...}
+  totais_produtos = {}
+
+  for p in dados_pedidos:
+    itens = p.get("itens", {})
+    for produto, qtd_str in itens.items():
+      if produto not in totais_produtos:
+        totais_produtos[produto] = {}
+
+      # Extrai o número e a unidade da string armazenada (ex: "5 KG" -> num=5.0, unidade="KG")
+      match = re.search(r"([\d\.,]+)\s*(.*)", qtd_str)
+      if match:
+        num_str = match.group(1).replace(",", ".")
+        unidade = match.group(2).strip().upper()
+        try:
+          valor = float(num_str)
+        except:
+          valor = 1.0
+
+        if unidade not in totais_produtos[produto]:
+          totais_produtos[produto][unidade] = 0.0
+        totais_produtos[produto][unidade] += valor
+
+  # Formata os dados para exibir na tabela e passar para o gráfico
+  tabela_volume = []
+  for prod, unidades in totais_produtos.items():
+    resumo_partes = []
+    total_principal = 0
+    unidade_principal = ""
+    for un, val in unidades.items():
+      # Formata bonito (sem .0 desnecessário se for inteiro)
+      val_fmt = int(val) if val.is_integer() else val
+      resumo_partes.append(f"{val_fmt} {un}")
+      total_principal = val_fmt
+      unidade_principal = un
+
+    tabela_volume.append({
+        "produto": prod,
+        "resumo": " + ".join(resumo_partes),
+        "total_num": total_principal,
+        "unidade": unidade_principal,
+    })
+
+  # Ordena pelo maior volume numérico
+  tabela_volume = sorted(
+      tabela_volume, key=lambda x: x["total_num"], reverse=True
+  )
+
+  # Prepara dados para o gráfico (Top 10 produtos)
+  top_10 = tabela_volume[:10]
+  labels_grafico = [item["produto"] for item in top_10]
+  valores_grafico = [item["total_num"] for item in top_10]
+
+  html_template = """
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <title>Banca do Mané - Volume Vendido</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 800px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 11px; }
+            .nav a:hover { background: #2c3e50; }
+            .nav a.ativo { background: #27ae60; }
+            .filter-box { background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+            .filter-box input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+            .filter-box button, .filter-box a.btn-limpar { padding: 8px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; cursor: pointer; border: none; }
+            .filter-box button { background: #d35400; color: white; }
+            .filter-box button:hover { background: #ba4a00; }
+            .filter-box a.btn-limpar { background: #e74c3c; color: white; display: inline-block; }
+            .filter-box a.btn-limpar:hover { background: #c0392b; }
+            .chart-container { position: relative; margin: 30px 0; height: 350px; width: 100%%; }
+            table { width: 100%%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+            th { background-color: #2c3e50; color: white; }
+            tr:hover { background-color: #f1f1f1; }
+            .pos { font-weight: bold; color: #d35400; width: 40px; text-align: center; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>📈 Relatório de Volume Vendido (Quilos, Caixas e Unidades)</h2>
+            <div class="nav">
+                <a href="/">Novo Pedido</a>
+                <a href="/historico">📜 Histórico</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Clientes</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Frequência</a>
+                <a href="/volume" class="ativo" style="background: #d35400;">📈 Volume Vendido</a>
+            </div>
+
+            <form method="GET" class="filter-box">
+                <div>
+                    <label for="data" style="font-size: 13px; margin-bottom: 3px; display: inline-block;">Filtrar por Data:</label>
+                    <input type="date" id="data" name="data" value="{{ data_filtro }}">
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                    <button type="submit">Filtrar Volume</button>
+                    {% if data_filtro %}
+                        <a href="/volume" class="btn-limpar">Limpar Filtro</a>
+                    {% endif %}
+                </div>
+            </form>
+
+            {% if tabela_volume %}
+                <!-- Gráfico Visual -->
+                <div class="chart-container">
+                    <canvas id="graficoVolume"></canvas>
+                </div>
+
+                <h3>Detalhamento Completo</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">#</th>
+                            <th>Produto</th>
+                            <th>Volume Total Consolidado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in tabela_volume %}
+                            <tr>
+                                <td class="pos">{{ loop.index }}º</td>
+                                <td><strong>{{ item.produto }}</strong></td>
+                                <td>{{ item.resumo }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="text-align: center; color: #777; margin-top: 30px;">Nenhum volume registrado para o período selecionado.</p>
+            {% endif %}
+        </div>
+
+        <script>
+            const labelsData = {{ labels_grafico | tojson }};
+            const valoresData = {{ valores_grafico | tojson }};
+
+            if (labelsData.length > 0) {
+                const ctx = document.getElementById('graficoVolume').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsData,
+                        datasets: [{
+                            label: 'Volume dos Principais Produtos',
+                            data: valoresData,
+                            backgroundColor: 'rgba(211, 84, 0, 0.7)',
+                            borderColor: 'rgba(211, 84, 0, 1)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        }
+                    }
+                });
+            }
+        </script>
+    </body>
+    </html>
+    """
+  return render_template_string(
+      html_template,
+      tabela_volume=tabela_volume,
+      labels_grafico=labels_grafico,
+      valores_grafico=valores_grafico,
+      data_filtro=data_filtro,
+  )
+
+
 @app.route("/webhook-whatsapp", methods=["POST"])
 def receber_mensagem():
   try:
     dados = request.get_json(silent=True)
     if not dados:
-      return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 200
+      return jsonify({"status": "erro", "detalhe": "JSON inválido"}}, 200
     remetente = str(dados.get("telefone", ""))
     if NUMERO_AUTORIZADO not in remetente:
-      return jsonify({"status": "ignorado"}), 200
+      return jsonify({"status": "ignorado"}}, 200
     texto = dados.get("mensagem", "")
     sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
     if sucesso:
