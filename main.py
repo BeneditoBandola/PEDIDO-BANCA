@@ -194,6 +194,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, str(e)
 
 
+# Rota Principal (Novo Pedido)
 @app.route("/", methods=["GET", "POST"])
 def index():
   mensagem_status = None
@@ -206,25 +207,19 @@ def index():
           texto_pedido, nome_cliente_input
       )
 
-  historico_pedidos = []
-  if os.path.exists(ARQUIVO_HISTORICO):
-    try:
-      with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
-        historico_pedidos = json.load(f)
-        historico_pedidos.reverse()
-    except:
-      historico_pedidos = []
-
   html_template = """
     <!DOCTYPE html>
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <title>Banca do Mané - Processador de Pedidos</title>
+        <title>Banca do Mané - Novo Pedido</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 750px; background: #fff; margin: 20px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-            h2, h3 { color: #2c3e50; text-align: center; }
+            .container { max-width: 650px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; }
+            .nav a { background: #34495e; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
+            .nav a:hover { background: #2c3e50; }
             label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
             input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
             textarea { height: 160px; resize: vertical; }
@@ -233,16 +228,14 @@ def index():
             .alert { padding: 15px; margin-top: 20px; border-radius: 4px; text-align: center; font-weight: bold; }
             .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
             .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-            .history-box { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
-            .pedido-card { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 15px; }
-            .pedido-header { font-weight: bold; color: #2980b9; margin-bottom: 8px; display: flex; justify-content: space-between; }
-            .pedido-obs { color: #c0392b; font-size: 13px; margin-top: 5px; }
-            ul { margin: 5px 0 0 20px; padding: 0; font-size: 14px; }
         </style>
     </head>
     <body>
         <div class="container">
-            <h2>🥬 Banca do Mané - Gerador de Pedidos</h2>
+            <h2>🥬 Banca do Mané</h2>
+            <div class="nav">
+                <a href="/historico">📜 Ver Histórico de Pedidos</a>
+            </div>
             <form method="POST">
                 <label for="cliente">Nome do Cliente / Telefone:</label>
                 <input type="text" id="cliente" name="cliente" value="Cliente Balcão" required>
@@ -260,28 +253,6 @@ def index():
                     <div class="alert alert-error">Erro ao processar: {{ mensagem_status }}</div>
                 {% endif %}
             {% endif %}
-
-            <div class="history-box">
-                <h3>📜 Histórico de Pedidos Salvos</h3>
-                {% if historico_pedidos %}
-                    {% for p in historico_pedidos %}
-                        <div class="pedido-card">
-                            <div class="pedido-header">
-                                <span>{{ p.codigo }} — Cliente: {{ p.cliente }}</span>
-                                <span style="color: #666; font-weight: normal; font-size: 12px;">{{ p.data_hora }}</span>
-                            </div>
-                            <div class="pedido-obs"><strong>Obs:</strong> {{ p.observacao }}</div>
-                            <ul>
-                                {% for prod, qtd in p.itens.items() %}
-                                    <li>{{ qtd }} — {{ prod }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p style="text-align: center; color: #777;">Nenhum pedido registrado ainda.</p>
-                {% endif %}
-            </div>
         </div>
     </body>
     </html>
@@ -290,7 +261,73 @@ def index():
       html_template,
       mensagem_status=mensagem_status,
       sucesso_status=sucesso_status,
-      historico_pedidos=historico_pedidos,
+  )
+
+
+# Rota Dedicada para o Histórico com Accordion (Clicável)
+@app.route("/historico", methods=["GET"])
+def historico():
+  historico_pedidos = []
+  if os.path.exists(ARQUIVO_HISTORICO):
+    try:
+      with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
+        historico_pedidos = json.load(f)
+        historico_pedidos.reverse()
+    except:
+      historico_pedidos = []
+
+  html_template = """
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <title>Banca do Mané - Histórico</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 650px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; }
+            .nav a { background: #27ae60; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
+            .nav a:hover { background: #219653; }
+            details { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 12px 15px; cursor: pointer; }
+            summary { font-weight: bold; color: #2980b9; outline: none; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+            summary span.data { color: #666; font-weight: normal; font-size: 12px; }
+            .pedido-obs { color: #c0392b; font-size: 13px; margin: 10px 0; border-top: 1px dashed #eee; padding-top: 8px; }
+            ul { margin: 8px 0 0 20px; padding: 0; font-size: 14px; color: #444; }
+            li { padding: 3px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>📜 Histórico de Pedidos</h2>
+            <div class="nav">
+                <a href="/">⬅ Voltar para Novo Pedido</a>
+            </div>
+
+            {% if historico_pedidos %}
+                {% for p in historico_pedidos %}
+                    <details>
+                        <summary>
+                            <span>{{ p.codigo }} — {{ p.cliente }}</span>
+                            <span class="data">{{ p.data_hora }}</span>
+                        </summary>
+                        <div class="pedido-obs"><strong>Observação:</strong> {{ p.observacao }}</div>
+                        <ul>
+                            {% for prod, qtd in p.itens.items() %}
+                                <li><strong>{{ qtd }}</strong> — {{ prod }}</li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                {% endfor %}
+            {% else %}
+                <p style="text-align: center; color: #777;">Nenhum pedido registrado até o momento.</p>
+            {% endif %}
+        </div>
+    </body>
+    </html>
+    """
+  return render_template_string(
+      html_template, historico_pedidos=historico_pedidos
   )
 
 
