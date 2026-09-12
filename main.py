@@ -147,7 +147,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     except:
       dados_existentes = []
 
-  # Numeração sequencial contínua baseada no total de pedidos salvos
   numero_sequencial = len(dados_existentes) + 1
   codigo_pedido = f"#{numero_sequencial:02d} / {data_hoje}"
 
@@ -191,6 +190,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, str(e)
 
 
+# Rota Principal (Novo Pedido)
 @app.route("/", methods=["GET", "POST"])
 def index():
   mensagem_status = None
@@ -213,8 +213,8 @@ def index():
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
             .container { max-width: 650px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; }
-            .nav a { background: #34495e; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
+            .nav a { background: #34495e; color: white; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
             .nav a:hover { background: #2c3e50; }
             label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
             input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
@@ -230,7 +230,9 @@ def index():
         <div class="container">
             <h2>🥬 Banca do Mané</h2>
             <div class="nav">
-                <a href="/historico">📜 Ver Histórico de Pedidos</a>
+                <a href="/">Novo Pedido</a>
+                <a href="/historico">📜 Histórico</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
             </div>
             <form method="POST">
                 <label for="cliente">Nome do Cliente / Telefone:</label>
@@ -260,6 +262,7 @@ def index():
   )
 
 
+# Rota do Histórico
 @app.route("/historico", methods=["GET"])
 def historico():
   historico_pedidos = []
@@ -281,9 +284,9 @@ def historico():
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
             .container { max-width: 650px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; }
-            .nav a { background: #27ae60; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 14px; }
-            .nav a:hover { background: #219653; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
+            .nav a { background: #34495e; color: white; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+            .nav a:hover { background: #2c3e50; }
             details { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 12px 15px; cursor: pointer; }
             summary { font-weight: bold; color: #2980b9; outline: none; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
             summary span.data { color: #666; font-weight: normal; font-size: 12px; }
@@ -296,7 +299,9 @@ def historico():
         <div class="container">
             <h2>📜 Histórico de Pedidos</h2>
             <div class="nav">
-                <a href="/">⬅ Voltar para Novo Pedido</a>
+                <a href="/">Novo Pedido</a>
+                <a href="/historico" style="background: #27ae60;">Histórico</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
             </div>
 
             {% if historico_pedidos %}
@@ -323,6 +328,131 @@ def historico():
     """
   return render_template_string(
       html_template, historico_pedidos=historico_pedidos
+  )
+
+
+# Rota do Relatório com Filtro de Data
+@app.route("/relatorio", methods=["GET"])
+def relatorio():
+  data_filtro = request.args.get("data", "")
+
+  dados_pedidos = []
+  if os.path.exists(ARQUIVO_HISTORICO):
+    try:
+      with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
+        dados_pedidos = json.load(f)
+    except:
+      dados_pedidos = []
+
+  # Aplica o filtro de data se o usuário selecionou alguma (formato YYYY-MM-DD do input date)
+  if data_filtro:
+    dados_pedidos = [
+        p
+        for p in dados_pedidos
+        if p.get("data_hora", "").startswith(data_filtro)
+    ]
+
+  ranking_produtos = {}
+  total_pedidos = len(dados_pedidos)
+
+  for p in dados_pedidos:
+    itens = p.get("itens", {})
+    for produto, qtd_str in itens.items():
+      if produto not in ranking_produtos:
+        ranking_produtos[produto] = {"frequencia_pedidos": 0}
+      ranking_produtos[produto]["frequencia_pedidos"] += 1
+
+  ranking_ordenado = sorted(
+      ranking_produtos.items(),
+      key=lambda x: x[1]["frequencia_pedidos"],
+      reverse=True,
+  )
+
+  html_template = """
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <title>Banca do Mané - Relatório de Vendas</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 700px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2, h3 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
+            .nav a { background: #34495e; color: white; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+            .nav a:hover { background: #2c3e50; }
+            .filter-box { background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+            .filter-box input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+            .filter-box button, .filter-box a.btn-limpar { padding: 8px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; cursor: pointer; border: none; }
+            .filter-box button { background: #27ae60; color: white; }
+            .filter-box button:hover { background: #219653; }
+            .filter-box a.btn-limpar { background: #e74c3c; color: white; display: inline-block; }
+            .filter-box a.btn-limpar:hover { background: #c0392b; }
+            .stats-card { background: #e8f4fd; border: 1px solid #bbe1fa; padding: 12px; border-radius: 6px; text-align: center; margin-bottom: 20px; font-size: 15px; color: #1d6fa5; font-weight: bold; }
+            table { width: 100%%; border-collapse: collapse; margin-top: 10px; }
+            th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+            th { background-color: #2c3e50; color: white; }
+            tr:hover { background-color: #f1f1f1; }
+            .pos { font-weight: bold; color: #e67e22; width: 40px; text-align: center; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>📊 Relatório de Frequência de Produtos</h2>
+            <div class="nav">
+                <a href="/">Novo Pedido</a>
+                <a href="/historico">📜 Histórico</a>
+                <a href="/relatorio" style="background: #27ae60;">Relatório</a>
+            </div>
+
+            <form method="GET" class="filter-box">
+                <div>
+                    <label for="data" style="font-size: 13px; margin-bottom: 3px; display: inline-block;">Filtrar por Data:</label>
+                    <input type="date" id="data" name="data" value="{{ data_filtro }}">
+                </div>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                    <button type="submit">Filtrar</button>
+                    {% if data_filtro %}
+                        <a href="/relatorio" class="btn-limpar">Limpar Filtro</a>
+                    {% endif %}
+                </div>
+            </form>
+
+            <div class="stats-card">
+                Total de Pedidos no Período: {{ total_pedidos }}
+            </div>
+
+            {% if ranking_ordenado %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">#</th>
+                            <th>Produto</th>
+                            <th style="text-align: center;">Vezes Pedido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prod, info in ranking_ordenado %}
+                            <tr>
+                                <td class="pos">{{ loop.index }}º</td>
+                                <td><strong>{{ prod }}</strong></td>
+                                <td style="text-align: center;">{{ info.frequencia_pedidos }} pedidos</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="text-align: center; color: #777; margin-top: 20px;">Nenhum dado encontrado para a data selecionada.</p>
+            {% endif %}
+        </div>
+    </body>
+    </html>
+    """
+  return render_template_string(
+      html_template,
+      total_pedidos=total_pedidos,
+      ranking_ordenado=ranking_ordenado,
+      data_filtro=data_filtro,
   )
 
 
