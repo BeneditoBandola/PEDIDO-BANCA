@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from fpdf import FPDF
 import json
@@ -21,32 +22,6 @@ def limpiar_texto_pdf(texto):
   return re.sub(
       r"[^\w\s\-\(\)\.,/:;áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]", "", str(texto)
   ).strip()
-
-
-def disparar_para_make(codigo_pedido, nome_cliente, obs_cliente, carrinho):
-  webhook_url = os.environ.get("WEBHOOK_MAKE_URL", "")
-  if not webhook_url:
-    return False, "WEBHOOK_MAKE_URL não configurada no Render."
-
-  payload = {
-      "codigo": codigo_pedido,
-      "cliente": nome_cliente,
-      "observacao": obs_cliente,
-      "itens": carrinho,
-      "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-  }
-
-  try:
-    response = requests.post(webhook_url, json=payload, timeout=10)
-    if response.status_code == 200:
-      return True, "Disparado para o Make com sucesso"
-    else:
-      return (
-          False,
-          f"Erro no Make (Status {response.status_code}): {response.text}",
-      )
-  except Exception as e:
-    return False, str(e)
 
 
 def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
@@ -189,7 +164,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   with open(ARQUIVO_HISTORICO, "w", encoding="utf-8") as f:
     json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
-  # Geração do PDF local (mantida para registro)
+  # Geração do PDF local
   class PDF(FPDF):
 
     def header(self):
@@ -277,19 +252,41 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
     fill_toggle = not fill_toggle
 
   tmp_dir = tempfile.gettempdir()
-  pdf_path = os.path.join(
-      tmp_dir, f"pedido_{codigo_pedido.replace('/', '_').replace('#', '')}.pdf"
-  )
+  nome_arquivo_pdf = f"pedido_{codigo_pedido.replace('/', '_').replace('#', '').strip()}.pdf"
+  pdf_path = os.path.join(tmp_dir, nome_arquivo_pdf)
   pdf.output(pdf_path)
 
-  # Dispara o webhook para o Make enviar o e-mail sem bloqueios de rede
-  make_sucesso, make_msg = disparar_para_make(
-      codigo_pedido, nome_cliente, obs_cliente, carrinho
-  )
-  if not make_sucesso:
-    return False, f"Erro ao comunicar com o Make: {make_msg}"
+  # Converte o PDF em Base64 para enviar via JSON para o Make
+  with open(pdf_path, "rb") as f:
+    pdf_bytes = f.read()
+    pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
 
-  return True, codigo_pedido
+  # Dispara para o Make com os dados e o PDF embutido
+  webhook_url = os.environ.get("WEBHOOK_MAKE_URL", "")
+  if not webhook_url:
+    return False, "WEBHOOK_MAKE_URL não configurada no Render."
+
+  payload = {
+      "codigo": codigo_pedido,
+      "cliente": nome_cliente,
+      "observacao": obs_cliente,
+      "itens": carrinho,
+      "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+      "pdf_base64": pdf_base64,
+      "pdf_nome": nome_arquivo_pdf,
+  }
+
+  try:
+    response = requests.post(webhook_url, json=payload, timeout=15)
+    if response.status_code == 200:
+      return True, codigo_pedido
+    else:
+      return (
+          False,
+          f"Erro no Make (Status {response.status_code}): {response.text}",
+      )
+  except Exception as e:
+    return False, str(e)
 
 
 @app.route("/webhook-whatsapp", methods=["POST"])
