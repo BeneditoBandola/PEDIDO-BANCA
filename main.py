@@ -10,7 +10,6 @@ app = Flask(__name__)
 ARQUIVO_HISTORICO = "historico_pedidos.json"
 NUMERO_AUTORIZADO = "3598464384"
 
-# Fuso horário de Brasília (UTC-3)
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
 
 CATALOGO_PRODUTOS = {
@@ -77,8 +76,17 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     if not linha_inf:
       continue
 
-    if linha_inf.startswith("obs:") or linha_inf.startswith("observacao:") or linha_inf.startswith("observação:"):
-      limpo = re.sub(r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE)
+    if (
+        linha_inf.startswith("obs:")
+        or linha_inf.startswith("observacao:")
+        or linha_inf.startswith("observação:")
+    ):
+      limpo = re.sub(
+          r"obs(ervacao|erenação)?[:\s\-]*",
+          "",
+          linha_original,
+          flags=re.IGNORECASE,
+      )
       if limpo.strip():
         observacoes_encontradas.append(limpo.strip())
       continue
@@ -109,7 +117,14 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
         )
       carrinho[produto_encontrado] = q_str
     else:
-      ignorar = ["bom dia", "boa tarde", "boa noite", "pedido p hj", "pedido para hoje", "segue o pedido"]
+      ignorar = [
+          "bom dia",
+          "boa tarde",
+          "boa noite",
+          "pedido p hj",
+          "pedido para hoje",
+          "segue o pedido",
+      ]
       if any(ign in linha_inf for ign in ignorar):
         continue
 
@@ -133,7 +148,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     except:
       dados_existentes = []
 
-  # Conta apenas os pedidos gerados hoje para reiniciar a contagem (01, 02, 03...)
   pedidos_hoje = [
       p for p in dados_existentes if p.get("data_hora", "").startswith(data_str_iso)
   ]
@@ -285,7 +299,7 @@ def receber_mensagem():
   try:
     dados = request.get_json(silent=True)
     if not dados:
-      return jsonify({"status": "erro", "detalhe": "JSON inválido"}}, 200
+      return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 200
     remetente = str(dados.get("telefone", ""))
     if NUMERO_AUTORIZADO not in remetente:
       return jsonify({"status": "ignorado"}), 200
