@@ -10,6 +10,53 @@ app = Flask(__name__)
 ARQUIVO_HISTORICO = "historico_pedidos.json"
 NUMERO_AUTORIZADO = "3598464384"
 
+# Dicionário inteligente de produtos e seus sinônimos/variações de digitação
+CATALOGO_PRODUTOS = {
+    "BATATA LAVADA": ["batata", "batata lavada"],
+    "TOMATE SALADA": ["tomate", "tomate salada"],
+    "TOMATE CEREJA": ["tomate cereja", "cereja"],
+    "ABACAXI PÉROLA": ["abacaxi", "abacaxi perola"],
+    "CENOURA": ["cenoura"],
+    "LIMÃO TAITI": ["limao", "limão", "limoes", "limões", "taiti"],
+    "CEBOLA": ["cebola"],
+    "ALHO": ["alho", "cabeca de alho", "cabeças de alho"],
+    "MANDIOQUINHA": ["mandioquinha", "batata baroa"],
+    "BETERRABA": ["beterraba"],
+    "REPOLHO": ["repolho"],
+    "COUVE": ["couve", "maco de couve", "maços de couve"],
+    "COUVE-FLOR": ["couve flor", "couve-flor"],
+    "MORANGO": ["morango", "morangos"],
+    "MANGA PALMER": ["manga palmer", "palmer"],
+    "MANGA TOMMY": ["manga tommy", "tommy", "manga"],
+    "BANANA PRATA": ["banana", "banana prata", "dz de banana", "dúzia de banana"],
+    "MAMÃO FORMOSA": ["mamao", "mamão", "mamao formosa", "mamão formosa"],
+    "GOIABA": ["goiaba"],
+    "PERA": ["pera", "pêra"],
+    "MAÇÃ NACIONAL GALA": ["maca", "maçã", "maca gala", "maçã gala"],
+    "SALSA": ["salsa", "salsinha"],
+    "CHEIRO VERDE": ["cheiro verde", "cheiro-verde"],
+    "AGRIÃO": ["agriao", "agrião"],
+    "RÚCULA": ["rucula", "rúcula"],
+    "PEPINO JAPONÊS": ["pepino", "pepino japones", "pepino japonês"],
+    "JILÓ": ["jilo", "jiló"],
+    "QUIABO": ["quiabo"],
+    "ERVILHA DEBULHADA CONGELADA": ["ervilha", "ervilha congelada", "ervilha debulhada"],
+    "UVA NIÁGARA": ["uva niagara", "niagara"],
+    "UVA VITÓRIA": ["uva vitoria", "vitoria"],
+    "UVA": ["uva", "uvas"],
+    "MELANCIA": ["melancia", "melancias"],
+}
+
+
+def identificar_produto(linha_inf):
+  # Varre o catálogo procurando qual sinônimo corresponde ao texto digitado
+  for produto_oficial, sinonimos in CATALOGO_PRODUTOS.items():
+    for sinonimo in sinonimos:
+      # Usa palavra exata ou contida com segurança para evitar falsos positivos
+      if sinonimo in linha_inf:
+        return produto_oficial
+  return None
+
 
 def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   carrinho = {}
@@ -18,95 +65,47 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   observacoes_encontradas = []
 
   for linha in linhas:
-    linha_inf = linha.lower().strip()
+    linha_original = linha.strip()
+    linha_inf = linha_original.lower()
     if not linha_inf:
       continue
 
-    produto_encontrado = None
-    if "limão" in linha_inf or "limao" in linha_inf:
-      produto_encontrado = "LIMÃO TAITI"
-    elif "abacaxi" in linha_inf:
-      produto_encontrado = "ABACAXI PÉROLA"
-    elif "morango" in linha_inf:
-      produto_encontrado = "MORANGO"
-    elif "manga" in linha_inf:
-      produto_encontrado = "MANGA PALMER"
-    elif "pepino" in linha_inf:
-      produto_encontrado = "PEPINO JAPONÊS"
-    elif "tomate cereja" in linha_inf:
-      produto_encontrado = "TOMATE CEREJA"
-    elif "tomate" in linha_inf:
-      produto_encontrado = "TOMATE SALADA"
-    elif "couve flor" in linha_inf or "couve-flor" in linha_inf:
-      produto_encontrado = "COUVE-FLOR"
-    elif "couve" in linha_inf:
-      produto_encontrado = "COUVE"
-    elif "jiló" in linha_inf or "jilo" in linha_inf:
-      produto_encontrado = "JILÓ"
-    elif "quiabo" in linha_inf:
-      produto_encontrado = "QUIABO"
-    elif "ervilha" in linha_inf or "ervlha" in linha_inf:
-      produto_encontrado = "ERVILHA DEBULHADA CONGELADA"
-    elif "salsinha" in linha_inf or "salsa" in linha_inf:
-      produto_encontrado = "SALSA"
-    elif "agrião" in linha_inf or "agriao" in linha_inf:
-      produto_encontrado = "AGRIÃO"
-    elif "rúcula" in linha_inf or "rucula" in linha_inf:
-      produto_encontrado = "RÚCULA"
-    elif "repolho" in linha_inf:
-      produto_encontrado = "REPOLHO"
-    elif "banana" in linha_inf:
-      produto_encontrado = "BANANA PRATA"
-    elif "goiaba" in linha_inf:
-      produto_encontrado = "GOIABA"
-    elif "pêra" in linha_inf or "pera" in linha_inf:
-      produto_encontrado = "PERA"
-    elif "mamão" in linha_inf or "mamao" in linha_inf:
-      produto_encontrado = "MAMÃO FORMOSA"
-    elif "maçã" in linha_inf or "maca" in linha_inf:
-      produto_encontrado = "MAÇÃ NACIONAL GALA"
-    elif "cebola" in linha_inf:
-      produto_encontrado = "CEBOLA"
-    elif "alho" in linha_inf:
-      produto_encontrado = "ALHO"
-    elif "mandioquinha" in linha_inf:
-      produto_encontrado = "MANDIOQUINHA"
-    elif "cenoura" in linha_inf:
-      produto_encontrado = "CENOURA"
-    elif "batata" in linha_inf:
-      produto_encontrado = "BATATA LAVADA"
-    elif "cheiro verde" in linha_inf:
-      produto_encontrado = "CHEIRO VERDE"
-    elif "beterraba" in linha_inf:
-      produto_encontrado = "BETERRABA"
+    # Tenta identificar se a linha contém algum produto do catálogo
+    produto_encontrado = identificar_produto(linha_inf)
 
     if produto_encontrado:
-      nums = re.findall(r"\d+", linha_inf)
+      # Extrai números e unidades de medida com inteligência
+      nums = re.findall(r"\d+[\.,]?\d*", linha_inf)
       qtd_num = nums[0] if nums else "1"
-      if "dz" in linha_inf or "dúzia" in linha_inf:
+
+      if any(u in linha_inf for u in ["dz", "duzia", "dúzia"]):
         q_str = (
             f"{qtd_num} Dúzia(s)"
-            if int(qtd_num) > 1
+            if float(qtd_num.replace(",", ".")) > 1
             else "Caixa com 12 (Dúzia)"
         )
-      elif "cx" in linha_inf or "caixa" in linha_inf:
+      elif any(u in linha_inf for u in ["cx", "caixa"]):
         q_str = f"{qtd_num} Caixa(s)"
-      elif "k" in linha_inf or "kg" in linha_inf:
+      elif any(u in linha_inf for u in ["k", "kg"]):
         q_str = f"{qtd_num} KG"
+      elif any(u in linha_inf for u in ["pct", "pacote"]):
+        q_str = f"{qtd_num} Pacote(s)"
       else:
         q_str = (
             f"{qtd_num} Unidade"
-            if int(qtd_num) == 1
+            if float(qtd_num.replace(",", ".")) == 1
             else f"{qtd_num} Unidades"
         )
       carrinho[produto_encontrado] = q_str
     else:
-      if (
-          len(linha_inf) > 5
-          and "bom dia" not in linha_inf
-          and "boa tarde" not in linha_inf
-      ):
-        observacoes_encontradas.append(linha.strip())
+      # Se não é produto, avalia se é uma observação ou instrução válida
+      if any(
+          termo in linha_inf for termo in ["obs", "observacao", "observação", "teste"]
+      ) or len(linha_inf) > 8:
+        # Limpa prefixos redundantes de "obs:" se houver
+        limpo = re.sub(r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE)
+        if limpo.strip():
+          observacoes_encontradas.append(limpo.strip())
 
   if observacoes_encontradas:
     obs_cliente = " - ".join(observacoes_encontradas)
