@@ -15,32 +15,11 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   carrinho = {}
   linhas = texto_wpp.strip().split("\n")
   obs_cliente = "Nenhuma observação"
+  observacoes_encontradas = []
 
   for linha in linhas:
     linha_inf = linha.lower().strip()
     if not linha_inf:
-      continue
-
-    # Identifica saudações e instruções iniciais
-    if any(
-        w in linha_inf
-        for w in [
-            "bom dia",
-            "boa tarde",
-            "boa noite",
-            "olá",
-            "ola",
-            "p hj",
-            "para hoje",
-            "por favor",
-            "favor",
-        ]
-    ):
-      if len(linha_inf) > 15 and not any(
-          termo in linha_inf
-          for termo in ["separar", "pedido", "entrega", "urgente"]
-      ):
-        obs_cliente = linha.strip()
       continue
 
     produto_encontrado = None
@@ -121,6 +100,16 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
             else f"{qtd_num} Unidades"
         )
       carrinho[produto_encontrado] = q_str
+    else:
+      if (
+          len(linha_inf) > 5
+          and "bom dia" not in linha_inf
+          and "boa tarde" not in linha_inf
+      ):
+        observacoes_encontradas.append(linha.strip())
+
+  if observacoes_encontradas:
+    obs_cliente = " - ".join(observacoes_encontradas)
 
   if not carrinho:
     return False, "Nenhum produto identificado."
