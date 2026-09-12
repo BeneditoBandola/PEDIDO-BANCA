@@ -259,7 +259,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   )
   pdf.output(pdf_path)
 
-  # Dispara o e-mail automático em background junto com o Make (opcional)
+  # Dispara o e-mail automático em background
   threading.Thread(
       target=enviar_email_automatico, args=(pdf_path, codigo_pedido, nome_cliente)
   ).start()
@@ -271,7 +271,6 @@ def enviar_email_automatico(pdf_path, codigo_pedido, cliente_nome):
   smtp_server = "smtp.gmail.com"
   smtp_port = 587
 
-  # Puxa o e-mail e a senha de app de forma segura pelas variáveis de ambiente do Render
   remetente = os.environ.get("EMAIL_REMETENTE", "")
   senha_app = os.environ.get("EMAIL_SENHA", "")
 
@@ -327,7 +326,7 @@ def receber_mensagem():
           jsonify(
               {"status": "erro", "detalhe": "JSON inválido ou ausente"}
           ),
-          400,
+          200,
       )
 
     remetente = str(dados.get("telefone", ""))
@@ -341,16 +340,17 @@ def receber_mensagem():
           jsonify(
               {"status": "erro", "detalhe": "Campo mensagem não encontrado"}
           ),
-          400,
+          200,
       )
 
     sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
     if sucesso:
       return jsonify({"status": "sucesso", "pedido": msg_retorno}), 200
     else:
-      return jsonify({"status": "erro", "detalhe": msg_retorno}), 400
+      return jsonify({"status": "erro", "detalhe": msg_retorno}), 200
   except Exception as e:
-    return jsonify({"status": "erro", "detalhe": str(e)}), 500
+    # Retorna o erro detalhado diretamente na tela para sabermos o motivo exato
+    return jsonify({"status": "erro_critico", "detalhe": str(e)}), 200
 
 
 if __name__ == "__main__":
