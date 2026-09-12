@@ -14,12 +14,15 @@ NUMERO_AUTORIZADO = "3598464384"
 def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   carrinho = {}
   linhas = texto_wpp.strip().split("\n")
-  obs_cliente = "Pedido via WhatsApp Automático"
+  obs_cliente = "Nenhuma observação"
 
   for linha in linhas:
     linha_inf = linha.lower().strip()
     if not linha_inf:
       continue
+
+    # Identifica se é saudação ou instrução inicial para tratar como observação real se necessário,
+    # mas ignorando frases genéricas longas de "por favor separar"
     if any(
         w in linha_inf
         for w in [
@@ -34,7 +37,11 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
             "favor",
         ]
     ):
-      if len(linha_inf) > 15:
+      # Só guarda como observação se for uma instrução curta específica, senão ignora a saudação pura
+      if len(linha_inf) > 15 and not any(
+          termo in linha_inf
+          for term in ["separar", "pedido", "entrega", "urgente"]
+      ):
         obs_cliente = linha.strip()
       continue
 
@@ -137,7 +144,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   numero_sequencial = len(pedidos_hoje) + 1
   codigo_pedido = f"#{numero_sequencial:02d} / {data_hoje}"
 
-  # --- AQUI ESTÁ O AJUSTE: Formata os itens em formato de lista limpa ---
   texto_itens_formatado = ""
   for produto, qtd in carrinho.items():
     texto_itens_formatado += f"• {qtd} - {produto}\n"
@@ -157,7 +163,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   if not webhook_url:
     return False, "WEBHOOK_MAKE_URL não configurada no Render."
 
-  # Envia para o Make com os itens já organizados em texto limpo
   payload = {
       "codigo": codigo_pedido,
       "cliente": nome_cliente,
