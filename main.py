@@ -1,3 +1,16 @@
+from datetime import datetime
+import json
+import os
+import re
+import requests
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+
+ARQUIVO_HISTORICO = "historico_pedidos.json"
+NUMERO_AUTORIZADO = "3598464384"
+
+
 def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   carrinho = {}
   linhas = texto_wpp.strip().split("\n")
@@ -23,7 +36,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
             "favor",
         ]
     ):
-      # Correção aplicada aqui: alterado de 'term' para 'termo'
       if len(linha_inf) > 15 and not any(
           termo in linha_inf
           for termo in ["separar", "pedido", "entrega", "urgente"]
@@ -168,3 +180,26 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
       )
   except Exception as e:
     return False, str(e)
+
+
+@app.route("/webhook-whatsapp", methods=["POST"])
+def receber_mensagem():
+  try:
+    dados = request.get_json(silent=True)
+    if not dados:
+      return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 200
+    remetente = str(dados.get("telefone", ""))
+    if NUMERO_AUTORIZADO not in remetente:
+      return jsonify({"status": "ignorado"}), 200
+    texto = dados.get("mensagem", "")
+    sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
+    if sucesso:
+      return jsonify({"status": "sucesso", "pedido": msg_retorno}), 200
+    else:
+      return jsonify({"status": "erro", "detalhe": msg_retorno}), 200
+  except Exception as e:
+    return jsonify({"status": "erro_critico", "detalhe": str(e)}), 200
+
+
+if __name__ == "__main__":
+  app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
