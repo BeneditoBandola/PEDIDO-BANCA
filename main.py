@@ -3,7 +3,7 @@ import json
 import os
 import re
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
@@ -58,13 +58,12 @@ def identificar_produto(linha_inf):
   return None
 
 
-def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
+def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
   carrinho = {}
   linhas = texto_wpp.strip().split("\n")
   obs_cliente = "Nenhuma observação"
   observacoes_encontradas = []
 
-  # Pega a data e hora atual ajustada para o horário de Brasília
   agora_brasilia = datetime.now(FUSO_BRASILIA)
 
   for linha in linhas:
@@ -112,7 +111,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
     obs_cliente = " - ".join(observacoes_encontradas)
 
   if not carrinho:
-    return False, "Nenhum produto identificado."
+    return False, "Nenhum produto identificado na mensagem."
 
   data_hoje = agora_brasilia.strftime("%d/%m/%Y")
   dados_existentes = []
@@ -123,7 +122,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
     except:
       dados_existentes = []
 
-  # Filtra os pedidos do dia considerando a data de Brasília
   data_str_iso = agora_brasilia.strftime("%Y-%m-%d")
   pedidos_hoje = [
       p for p in dados_existentes if p.get("data_hora", "").startswith(data_str_iso)
@@ -171,6 +169,71 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
     return False, str(e)
 
 
+# Rota da Página Web (Painel Manual)
+@app.route("/", methods=["GET", "POST"])
+def index():
+  mensagem_status = None
+  sucesso_status = False
+  if request.method == "POST":
+    texto_pedido = request.form.get("mensagem", "")
+    nome_cliente_input = request.form.get("cliente", "Painel Manual")
+    if texto_pedido.strip():
+      sucesso_status, mensagem_status = interpretar_e_gerar_pedido(
+          texto_pedido, nome_cliente_input
+      )
+
+  html_template = """
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <title>Banca do Mané - Processador de Pedidos</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 600px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+            label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+            input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+            textarea { height: 180px; resize: vertical; }
+            button { background-color: #27ae60; color: white; border: none; padding: 14px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; }
+            button:hover { background-color: #219653; }
+            .alert { padding: 15px; margin-top: 20px; border-radius: 4px; text-align: center; font-weight: bold; }
+            .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+            .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>🥬 Banca do Mané - Gerador de Pedidos</h2>
+            <form method="POST">
+                <label for="cliente">Nome do Cliente / Telefone:</label>
+                <input type="text" id="cliente" name="cliente" value="Cliente Balcão / WhatsApp" required>
+
+                <label for="mensagem">Cole a mensagem do pedido aqui:</label>
+                <textarea id="mensagem" name="mensagem" placeholder="Ex:&#10;3 kg de batata lavada&#10;2 cx de tomate salada&#10;obs: entrega urgente" required></textarea>
+
+                <button type="submit">Processar e Enviar Pedido por E-mail</button>
+            </form>
+
+            {% if mensagem_status %}
+                {% if sucesso_status %}
+                    <div class="alert alert-success">Pedido gerado e enviado com sucesso! Código: {{ mensagem_status }}</div>
+                {% else %}
+                    <div class="alert alert-error">Erro ao processar: {{ mensagem_status }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </body>
+    </html>
+    """
+  return render_template_string(
+      html_template,
+      mensagem_status=mensagem_status,
+      sucesso_status=sucesso_status,
+  )
+
+
+# Rota antiga de Webhook mantida funcionando 100%
 @app.route("/webhook-whatsapp", methods=["POST"])
 def receber_mensagem():
   try:
