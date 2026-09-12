@@ -1,27 +1,14 @@
-import base64
 from datetime import datetime
-from fpdf import FPDF
 import json
 import os
 import re
 import requests
-import tempfile
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
 ARQUIVO_HISTORICO = "historico_pedidos.json"
-
-# Número de telefone autorizado
 NUMERO_AUTORIZADO = "3598464384"
-
-
-def limpiar_texto_pdf(texto):
-  if not texto:
-    return ""
-  return re.sub(
-      r"[^\w\s\-\(\)\.,/:;áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]", "", str(texto)
-  ).strip()
 
 
 def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
@@ -154,9 +141,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
       "codigo": codigo_pedido,
       "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
       "cliente": nome_cliente,
-      "endereco": "Encaminhado via WhatsApp",
-      "telefone": nome_cliente,
-      "email": "",
       "observacao": obs_cliente,
       "itens": carrinho,
   }
@@ -164,104 +148,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   with open(ARQUIVO_HISTORICO, "w", encoding="utf-8") as f:
     json.dump(dados_existentes, f, ensure_ascii=False, indent=4)
 
-  # Geração do PDF local
-  class PDF(FPDF):
-
-    def header(self):
-      if os.path.exists("logo.png"):
-        self.image("logo.png", 10, 10, 22)
-        self.set_xy(35, 12)
-      else:
-        self.set_xy(10, 12)
-      self.set_font("Arial", "B", 13)
-      self.set_text_color(30, 61, 47)
-      self.cell(0, 5, "BANCA DO MANÉ - FRUTAS, VERDURAS E LEGUMES", 0, 1, "L")
-      self.set_x(35 if os.path.exists("logo.png") else 10)
-      self.set_font("Arial", "", 8)
-      self.set_text_color(100, 100, 100)
-      self.cell(
-          0,
-          4,
-          "Mercado Municipal - Box 43 a 48 | Poços de Caldas - MG",
-          0,
-          1,
-          "L",
-      )
-      self.ln(6)
-
-    def footer(self):
-      self.set_y(-20)
-      self.set_font("Arial", "I", 8)
-      self.set_text_color(150, 150, 150)
-      self.cell(
-          0, 10, f"Comprovante Automático - Página {self.page_no()}", 0, 0, "C"
-      )
-
-  pdf = PDF()
-  pdf.add_page()
-  pdf.set_auto_page_break(auto=True, margin=20)
-
-  pdf.set_font("Arial", "B", 10)
-  pdf.set_fill_color(30, 61, 47)
-  pdf.set_text_color(255, 255, 255)
-  pdf.cell(
-      190,
-      7,
-      limpiar_texto_pdf(f" PEDIDO AUTOMATICO: {codigo_pedido}"),
-      1,
-      1,
-      "C",
-      fill=True,
-  )
-
-  pdf.set_font("Arial", "B", 9)
-  pdf.set_text_color(0, 0, 0)
-  pdf.set_fill_color(245, 247, 246)
-  pdf.cell(
-      150,
-      6,
-      limpiar_texto_pdf(f" CLIENTE / ORIGEM: {nome_cliente}"),
-      1,
-      0,
-      "L",
-      fill=True,
-  )
-  pdf.cell(40, 6, f" DATA: {data_hoje}", 1, 1, "L", fill=True)
-  pdf.cell(190, 6, limpiar_texto_pdf(f" OBS: {obs_cliente}"), 1, 1, "L", fill=True)
-  pdf.ln(6)
-
-  pdf.set_fill_color(30, 61, 47)
-  pdf.set_text_color(255, 255, 255)
-  pdf.cell(100, 7, "  Produto Solicitado", 1, 0, "L", fill=True)
-  pdf.cell(50, 7, "Quantidade / Ponto", 1, 0, "C", fill=True)
-  pdf.cell(40, 7, "Valor (R$)", 1, 1, "C", fill=True)
-
-  pdf.set_font("Arial", "", 9)
-  pdf.set_text_color(50, 50, 50)
-
-  fill_toggle = False
-  for p, q in carrinho.items():
-    (
-        pdf.set_fill_color(250, 250, 250)
-        if fill_toggle
-        else pdf.set_fill_color(255, 255, 255)
-    )
-    pdf.cell(100, 6, limpiar_texto_pdf(f"  {p}"), 1, 0, "L", fill=True)
-    pdf.cell(50, 6, limpiar_texto_pdf(f"{q}"), 1, 0, "C", fill=True)
-    pdf.cell(40, 6, "R$ ________", 1, 1, "C", fill=True)
-    fill_toggle = not fill_toggle
-
-  tmp_dir = tempfile.gettempdir()
-  nome_arquivo_pdf = f"pedido_{codigo_pedido.replace('/', '_').replace('#', '').strip()}.pdf"
-  pdf_path = os.path.join(tmp_dir, nome_arquivo_pdf)
-  pdf.output(pdf_path)
-
-  # Converte o PDF em Base64 para enviar via JSON para o Make
-  with open(pdf_path, "rb") as f:
-    pdf_bytes = f.read()
-    pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
-
-  # Dispara para o Make com os dados e o PDF embutido
+  # Prepara os dados para o Make criar o arquivo PDF nativamente
   webhook_url = os.environ.get("WEBHOOK_MAKE_URL", "")
   if not webhook_url:
     return False, "WEBHOOK_MAKE_URL não configurada no Render."
@@ -272,8 +159,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
       "observacao": obs_cliente,
       "itens": carrinho,
       "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-      "pdf_base64": pdf_base64,
-      "pdf_nome": nome_arquivo_pdf,
+      "pdf_nome": f"pedido_{codigo_pedido.replace('/', '_').replace('#', '').strip()}.pdf",
   }
 
   try:
@@ -294,17 +180,11 @@ def receber_mensagem():
   try:
     dados = request.get_json(silent=True)
     if not dados:
-      return jsonify({"status": "erro", "detalhe": "JSON inválido ou ausente"}), 200
-
+      return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 200
     remetente = str(dados.get("telefone", ""))
-
     if NUMERO_AUTORIZADO not in remetente:
-      return jsonify({"status": "ignorado", "motivo": "Número não autorizado"}), 200
-
+      return jsonify({"status": "ignorado"}), 200
     texto = dados.get("mensagem", "")
-    if not texto:
-      return jsonify({"status": "erro", "detalhe": "Campo mensagem não encontrado"}), 200
-
     sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
     if sucesso:
       return jsonify({"status": "sucesso", "pedido": msg_retorno}), 200
