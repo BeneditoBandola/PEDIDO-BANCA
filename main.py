@@ -77,6 +77,12 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     if not linha_inf:
       continue
 
+    if linha_inf.startswith("obs:") or linha_inf.startswith("observacao:") or linha_inf.startswith("observação:"):
+      limpo = re.sub(r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE)
+      if limpo.strip():
+        observacoes_encontradas.append(limpo.strip())
+      continue
+
     produto_encontrado = identificar_produto(linha_inf)
 
     if produto_encontrado:
@@ -103,20 +109,12 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
         )
       carrinho[produto_encontrado] = q_str
     else:
-      # Ignora saudações e linhas inúteis na observação
-      ignorar = ["bom dia", "boa tarde", "boa noite", "pedido p hj", "pedido para hoje"]
+      ignorar = ["bom dia", "boa tarde", "boa noite", "pedido p hj", "pedido para hoje", "segue o pedido"]
       if any(ign in linha_inf for ign in ignorar):
         continue
 
-      # Apenas considera observação se tiver a palavra explícita ou for um texto longo/instrução
-      if any(
-          termo in linha_inf for termo in ["obs", "observacao", "observação", "entrega", "urgente"]
-      ) or (len(linha_inf) > 10 and not any(char.isdigit() for char in linha_inf)):
-        limpo = re.sub(
-            r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE
-        )
-        if limpo.strip():
-          observacoes_encontradas.append(limpo.strip())
+      if len(linha_inf) > 8 and not any(char.isdigit() for char in linha_inf):
+        observacoes_encontradas.append(linha_original)
 
   if observacoes_encontradas:
     obs_cliente = " - ".join(observacoes_encontradas)
@@ -125,6 +123,8 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, "Nenhum produto identificado na mensagem."
 
   data_hoje = agora_brasilia.strftime("%d/%m/%Y")
+  data_str_iso = agora_brasilia.strftime("%Y-%m-%d")
+
   dados_existentes = []
   if os.path.exists(ARQUIVO_HISTORICO):
     try:
@@ -133,7 +133,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     except:
       dados_existentes = []
 
-  data_str_iso = agora_brasilia.strftime("%Y-%m-%d")
+  # Conta apenas os pedidos gerados hoje para reiniciar a contagem (01, 02, 03...)
   pedidos_hoje = [
       p for p in dados_existentes if p.get("data_hora", "").startswith(data_str_iso)
   ]
@@ -192,6 +192,15 @@ def index():
           texto_pedido, nome_cliente_input
       )
 
+  historico_pedidos = []
+  if os.path.exists(ARQUIVO_HISTORICO):
+    try:
+      with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
+        historico_pedidos = json.load(f)
+        historico_pedidos.reverse()
+    except:
+      historico_pedidos = []
+
   html_template = """
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -200,16 +209,21 @@ def index():
         <title>Banca do Mané - Processador de Pedidos</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 600px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-            h2 { color: #2c3e50; text-align: center; margin-bottom: 20px; }
+            .container { max-width: 750px; background: #fff; margin: 20px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2, h3 { color: #2c3e50; text-align: center; }
             label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
             input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-            textarea { height: 180px; resize: vertical; }
+            textarea { height: 160px; resize: vertical; }
             button { background-color: #27ae60; color: white; border: none; padding: 14px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; }
             button:hover { background-color: #219653; }
             .alert { padding: 15px; margin-top: 20px; border-radius: 4px; text-align: center; font-weight: bold; }
             .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
             .alert-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+            .history-box { margin-top: 40px; border-top: 2px solid #eee; padding-top: 20px; }
+            .pedido-card { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-bottom: 15px; }
+            .pedido-header { font-weight: bold; color: #2980b9; margin-bottom: 8px; display: flex; justify-content: space-between; }
+            .pedido-obs { color: #c0392b; font-size: 13px; margin-top: 5px; }
+            ul { margin: 5px 0 0 20px; padding: 0; font-size: 14px; }
         </style>
     </head>
     <body>
@@ -220,7 +234,7 @@ def index():
                 <input type="text" id="cliente" name="cliente" value="Cliente Balcão" required>
 
                 <label for="mensagem">Cole a mensagem do pedido aqui:</label>
-                <textarea id="mensagem" name="mensagem" placeholder="Ex:&#10;3 dz de limão&#10;2 abacaxi&#10;3 couve flor&#10;1k de ervlha" required></textarea>
+                <textarea id="mensagem" name="mensagem" placeholder="Ex:&#10;3 dz de limão&#10;2 cx de tomate salada&#10;obs: entrega urgente" required></textarea>
 
                 <button type="submit">Processar e Enviar Pedido por E-mail</button>
             </form>
@@ -232,6 +246,28 @@ def index():
                     <div class="alert alert-error">Erro ao processar: {{ mensagem_status }}</div>
                 {% endif %}
             {% endif %}
+
+            <div class="history-box">
+                <h3>📜 Histórico de Pedidos Salvos</h3>
+                {% if historico_pedidos %}
+                    {% for p in historico_pedidos %}
+                        <div class="pedido-card">
+                            <div class="pedido-header">
+                                <span>{{ p.codigo }} — Cliente: {{ p.cliente }}</span>
+                                <span style="color: #666; font-weight: normal; font-size: 12px;">{{ p.data_hora }}</span>
+                            </div>
+                            <div class="pedido-obs"><strong>Obs:</strong> {{ p.observacao }}</div>
+                            <ul>
+                                {% for prod, qtd in p.itens.items() %}
+                                    <li>{{ qtd }} — {{ prod }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="text-align: center; color: #777;">Nenhum pedido registrado ainda.</p>
+                {% endif %}
+            </div>
         </div>
     </body>
     </html>
@@ -240,6 +276,7 @@ def index():
       html_template,
       mensagem_status=mensagem_status,
       sucesso_status=sucesso_status,
+      historico_pedidos=historico_pedidos,
   )
 
 
@@ -248,7 +285,7 @@ def receber_mensagem():
   try:
     dados = request.get_json(silent=True)
     if not dados:
-      return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 200
+      return jsonify({"status": "erro", "detalhe": "JSON inválido"}}, 200
     remetente = str(dados.get("telefone", ""))
     if NUMERO_AUTORIZADO not in remetente:
       return jsonify({"status": "ignorado"}), 200
