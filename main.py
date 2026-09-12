@@ -211,11 +211,12 @@ def index():
         <title>Banca do Mané - Novo Pedido</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 650px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
-            .nav a { background: #34495e; color: white; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
             .nav a:hover { background: #2c3e50; }
+            .nav a.ativo { background: #27ae60; }
             label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
             input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
             textarea { height: 160px; resize: vertical; }
@@ -230,8 +231,9 @@ def index():
         <div class="container">
             <h2>🥬 Banca do Mané</h2>
             <div class="nav">
-                <a href="/">Novo Pedido</a>
+                <a href="/" class="ativo">Novo Pedido</a>
                 <a href="/historico">📜 Histórico</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Melhores Clientes</a>
                 <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
             </div>
             <form method="POST">
@@ -282,11 +284,12 @@ def historico():
         <title>Banca do Mané - Histórico</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 650px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
-            .nav a { background: #34495e; color: white; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
             .nav a:hover { background: #2c3e50; }
+            .nav a.ativo { background: #27ae60; }
             details { background: #fafafa; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; padding: 12px 15px; cursor: pointer; }
             summary { font-weight: bold; color: #2980b9; outline: none; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
             summary span.data { color: #666; font-weight: normal; font-size: 12px; }
@@ -300,7 +303,8 @@ def historico():
             <h2>📜 Histórico de Pedidos</h2>
             <div class="nav">
                 <a href="/">Novo Pedido</a>
-                <a href="/historico" style="background: #27ae60;">Histórico</a>
+                <a href="/historico" class="ativo">Histórico</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Melhores Clientes</a>
                 <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
             </div>
 
@@ -331,11 +335,9 @@ def historico():
   )
 
 
-# Rota do Relatório com Filtro de Data
-@app.route("/relatorio", methods=["GET"])
-def relatorio():
-  data_filtro = request.args.get("data", "")
-
+# Rota de Melhores Clientes
+@app.route("/clientes", methods=["GET"])
+def clientes():
   dados_pedidos = []
   if os.path.exists(ARQUIVO_HISTORICO):
     try:
@@ -344,7 +346,102 @@ def relatorio():
     except:
       dados_pedidos = []
 
-  # Aplica o filtro de data se o usuário selecionou alguma (formato YYYY-MM-DD do input date)
+  # Agrupa e conta os pedidos por cliente
+  ranking_clientes = {}
+  for p in dados_pedidos:
+    cliente = p.get("cliente", "Cliente Desconhecido").strip()
+    if not cliente:
+      cliente = "Cliente Desconhecido"
+
+    if cliente not in ranking_clientes:
+      ranking_clientes[cliente] = {"total_pedidos": 0, "ultimo_pedido": ""}
+
+    ranking_clientes[cliente]["total_pedidos"] += 1
+    ranking_clientes[cliente]["ultimo_pedido"] = p.get("data_hora", "")
+
+  # Ordena do cliente que mais pediu para o que menos pediu
+  clientes_ordenados = sorted(
+      ranking_clientes.items(),
+      key=lambda x: x[1]["total_pedidos"],
+      reverse=True,
+  )
+
+  html_template = """
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <title>Banca do Mané - Melhores Clientes</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            h2, h3 { color: #2c3e50; text-align: center; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
+            .nav a:hover { background: #2c3e50; }
+            .nav a.ativo { background: #27ae60; }
+            table { width: 100%%; border-collapse: collapse; margin-top: 15px; }
+            th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+            th { background-color: #2c3e50; color: white; }
+            tr:hover { background-color: #f1f1f1; }
+            .pos { font-weight: bold; color: #8e44ad; width: 40px; text-align: center; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>👥 Ranking de Melhores Clientes</h2>
+            <div class="nav">
+                <a href="/">Novo Pedido</a>
+                <a href="/historico">📜 Histórico</a>
+                <a href="/clientes" class="ativo" style="background: #8e44ad;">👥 Melhores Clientes</a>
+                <a href="/relatorio" style="background: #2980b9;">📊 Relatório de Vendas</a>
+            </div>
+
+            {% if clientes_ordenados %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: center;">#</th>
+                            <th>Cliente / Nome</th>
+                            <th style="text-align: center;">Total de Pedidos</th>
+                            <th style="text-align: center;">Última Compra</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cli, info in clientes_ordenados %}
+                            <tr>
+                                <td class="pos">{{ loop.index }}º</td>
+                                <td><strong>{{ cli }}</strong></td>
+                                <td style="text-align: center;">{{ info.total_pedidos }}</td>
+                                <td style="text-align: center; color: #666; font-size: 12px;">{{ info.ultimo_pedido }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p style="text-align: center; color: #777; margin-top: 20px;">Nenhum cliente registrado ainda.</p>
+            {% endif %}
+        </div>
+    </body>
+    </html>
+    """
+  return render_template_string(
+      html_template, clientes_ordenados=clientes_ordenados
+  )
+
+
+# Rota do Relatório de Vendas
+@app.route("/relatorio", methods=["GET"])
+def relatorio():
+  data_filtro = request.args.get("data", "")
+  dados_pedidos = []
+  if os.path.exists(ARQUIVO_HISTORICO):
+    try:
+      with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
+        dados_pedidos = json.load(f)
+    except:
+      dados_pedidos = []
+
   if data_filtro:
     dados_pedidos = [
         p
@@ -376,11 +473,12 @@ def relatorio():
         <title>Banca do Mané - Relatório de Vendas</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-            .container { max-width: 700px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .container { max-width: 680px; background: #fff; margin: 30px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
             h2, h3 { color: #2c3e50; text-align: center; }
-            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 10px; }
-            .nav a { background: #34495e; color: white; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; }
+            .nav { text-align: center; margin-bottom: 25px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+            .nav a { background: #34495e; color: white; padding: 7px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 12px; }
             .nav a:hover { background: #2c3e50; }
+            .nav a.ativo { background: #27ae60; }
             .filter-box { background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
             .filter-box input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
             .filter-box button, .filter-box a.btn-limpar { padding: 8px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; cursor: pointer; border: none; }
@@ -393,7 +491,7 @@ def relatorio():
             th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
             th { background-color: #2c3e50; color: white; }
             tr:hover { background-color: #f1f1f1; }
-            .pos { font-weight: bold; color: #e67e22; width: 40px; text-align: center; }
+            .pos { font-weight: bold; color: #2980b9; width: 40px; text-align: center; }
         </style>
     </head>
     <body>
@@ -402,7 +500,8 @@ def relatorio():
             <div class="nav">
                 <a href="/">Novo Pedido</a>
                 <a href="/historico">📜 Histórico</a>
-                <a href="/relatorio" style="background: #27ae60;">Relatório</a>
+                <a href="/clientes" style="background: #8e44ad;">👥 Melhores Clientes</a>
+                <a href="/relatorio" class="ativo" style="background: #2980b9;">📊 Relatório de Vendas</a>
             </div>
 
             <form method="GET" class="filter-box">
