@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import re
@@ -10,7 +10,9 @@ app = Flask(__name__)
 ARQUIVO_HISTORICO = "historico_pedidos.json"
 NUMERO_AUTORIZADO = "3598464384"
 
-# Dicionário inteligente de produtos e seus sinônimos/variações de digitação
+# Fuso horário de Brasília (UTC-3)
+FUSO_BRASILIA = timezone(timedelta(hours=-3))
+
 CATALOGO_PRODUTOS = {
     "BATATA LAVADA": ["batata", "batata lavada"],
     "TOMATE SALADA": ["tomate", "tomate salada"],
@@ -49,10 +51,8 @@ CATALOGO_PRODUTOS = {
 
 
 def identificar_produto(linha_inf):
-  # Varre o catálogo procurando qual sinônimo corresponde ao texto digitado
   for produto_oficial, sinonimos in CATALOGO_PRODUTOS.items():
     for sinonimo in sinonimos:
-      # Usa palavra exata ou contida com segurança para evitar falsos positivos
       if sinonimo in linha_inf:
         return produto_oficial
   return None
@@ -64,17 +64,18 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   obs_cliente = "Nenhuma observação"
   observacoes_encontradas = []
 
+  # Pega a data e hora atual ajustada para o horário de Brasília
+  agora_brasilia = datetime.now(FUSO_BRASILIA)
+
   for linha in linhas:
     linha_original = linha.strip()
     linha_inf = linha_original.lower()
     if not linha_inf:
       continue
 
-    # Tenta identificar se a linha contém algum produto do catálogo
     produto_encontrado = identificar_produto(linha_inf)
 
     if produto_encontrado:
-      # Extrai números e unidades de medida com inteligência
       nums = re.findall(r"\d+[\.,]?\d*", linha_inf)
       qtd_num = nums[0] if nums else "1"
 
@@ -98,12 +99,12 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
         )
       carrinho[produto_encontrado] = q_str
     else:
-      # Se não é produto, avalia se é uma observação ou instrução válida
       if any(
           termo in linha_inf for termo in ["obs", "observacao", "observação", "teste"]
       ) or len(linha_inf) > 8:
-        # Limpa prefixos redundantes de "obs:" se houver
-        limpo = re.sub(r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE)
+        limpo = re.sub(
+            r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE
+        )
         if limpo.strip():
           observacoes_encontradas.append(limpo.strip())
 
@@ -113,7 +114,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   if not carrinho:
     return False, "Nenhum produto identificado."
 
-  data_hoje = datetime.now().strftime("%d/%m/%Y")
+  data_hoje = agora_brasilia.strftime("%d/%m/%Y")
   dados_existentes = []
   if os.path.exists(ARQUIVO_HISTORICO):
     try:
@@ -122,10 +123,10 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
     except:
       dados_existentes = []
 
+  # Filtra os pedidos do dia considerando a data de Brasília
+  data_str_iso = agora_brasilia.strftime("%Y-%m-%d")
   pedidos_hoje = [
-      p
-      for p in dados_existentes
-      if p.get("data_hora", "").startswith(datetime.now().strftime("%Y-%m-%d"))
+      p for p in dados_existentes if p.get("data_hora", "").startswith(data_str_iso)
   ]
   numero_sequencial = len(pedidos_hoje) + 1
   codigo_pedido = f"#{numero_sequencial:02d} / {data_hoje}"
@@ -136,7 +137,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
 
   novo_pedido = {
       "codigo": codigo_pedido,
-      "data_hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+      "data_hora": agora_brasilia.strftime("%Y-%m-%d %H:%M:%S"),
       "cliente": nome_cliente,
       "observacao": obs_cliente,
       "itens": carrinho,
@@ -154,7 +155,7 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
       "cliente": nome_cliente,
       "observacao": obs_cliente,
       "itens": texto_itens_formatado.strip(),
-      "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+      "data": agora_brasilia.strftime("%d/%m/%Y %H:%M:%S"),
   }
 
   try:
