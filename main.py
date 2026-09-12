@@ -25,8 +25,8 @@ CATALOGO_PRODUTOS = {
     "MANDIOQUINHA": ["mandioquinha", "batata baroa"],
     "BETERRABA": ["beterraba"],
     "REPOLHO": ["repolho"],
-    "COUVE": ["couve", "maco de couve", "maços de couve"],
-    "COUVE-FLOR": ["couve flor", "couve-flor"],
+    "COUVE": ["couve", "maço de couve", "maços de couve", "maco de couve"],
+    "COUVE-FLOR": ["couve flor", "couve-flor", "couveflor"],
     "MORANGO": ["morango", "morangos"],
     "MANGA PALMER": ["manga palmer", "palmer"],
     "MANGA TOMMY": ["manga tommy", "tommy", "manga"],
@@ -42,7 +42,12 @@ CATALOGO_PRODUTOS = {
     "PEPINO JAPONÊS": ["pepino", "pepino japones", "pepino japonês"],
     "JILÓ": ["jilo", "jiló"],
     "QUIABO": ["quiabo"],
-    "ERVILHA DEBULHADA CONGELADA": ["ervilha", "ervilha congelada", "ervilha debulhada"],
+    "ERVILHA DEBULHADA CONGELADA": [
+        "ervilha",
+        "ervlha",
+        "ervilha congelada",
+        "ervilha debulhada",
+    ],
     "UVA NIÁGARA": ["uva niagara", "niagara"],
     "UVA VITÓRIA": ["uva vitoria", "vitoria"],
     "UVA": ["uva", "uvas"],
@@ -98,9 +103,15 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
         )
       carrinho[produto_encontrado] = q_str
     else:
+      # Ignora saudações e linhas inúteis na observação
+      ignorar = ["bom dia", "boa tarde", "boa noite", "pedido p hj", "pedido para hoje"]
+      if any(ign in linha_inf for ign in ignorar):
+        continue
+
+      # Apenas considera observação se tiver a palavra explícita ou for um texto longo/instrução
       if any(
-          termo in linha_inf for termo in ["obs", "observacao", "observação", "teste"]
-      ) or len(linha_inf) > 8:
+          termo in linha_inf for termo in ["obs", "observacao", "observação", "entrega", "urgente"]
+      ) or (len(linha_inf) > 10 and not any(char.isdigit() for char in linha_inf)):
         limpo = re.sub(
             r"obs(ervacao|erenação)?[:\s\-]*", "", linha_original, flags=re.IGNORECASE
         )
@@ -169,7 +180,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, str(e)
 
 
-# Rota da Página Web (Painel Manual)
 @app.route("/", methods=["GET", "POST"])
 def index():
   mensagem_status = None
@@ -207,10 +217,10 @@ def index():
             <h2>🥬 Banca do Mané - Gerador de Pedidos</h2>
             <form method="POST">
                 <label for="cliente">Nome do Cliente / Telefone:</label>
-                <input type="text" id="cliente" name="cliente" value="Cliente Balcão / WhatsApp" required>
+                <input type="text" id="cliente" name="cliente" value="Cliente Balcão" required>
 
                 <label for="mensagem">Cole a mensagem do pedido aqui:</label>
-                <textarea id="mensagem" name="mensagem" placeholder="Ex:&#10;3 kg de batata lavada&#10;2 cx de tomate salada&#10;obs: entrega urgente" required></textarea>
+                <textarea id="mensagem" name="mensagem" placeholder="Ex:&#10;3 dz de limão&#10;2 abacaxi&#10;3 couve flor&#10;1k de ervlha" required></textarea>
 
                 <button type="submit">Processar e Enviar Pedido por E-mail</button>
             </form>
@@ -233,7 +243,6 @@ def index():
   )
 
 
-# Rota antiga de Webhook mantida funcionando 100%
 @app.route("/webhook-whatsapp", methods=["POST"])
 def receber_mensagem():
   try:
