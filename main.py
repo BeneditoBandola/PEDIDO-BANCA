@@ -573,8 +573,6 @@ def volume():
         if str(p.get("data_hora", "")).startswith(data_filtro)
     ]
 
-  # Dicionário para somar quantidades agrupadas por unidade de medida (KG, Caixa, Unidade, etc.)
-  # Ex: {"BATATA LAVADA": {"KG": 45.0, "Unidades": 0}, ...}
   totais_produtos = {}
 
   for p in dados_pedidos:
@@ -583,7 +581,6 @@ def volume():
       if produto not in totais_produtos:
         totais_produtos[produto] = {}
 
-      # Extrai o número e a unidade da string armazenada (ex: "5 KG" -> num=5.0, unidade="KG")
       match = re.search(r"([\d\.,]+)\s*(.*)", qtd_str)
       if match:
         num_str = match.group(1).replace(",", ".")
@@ -597,14 +594,12 @@ def volume():
           totais_produtos[produto][unidade] = 0.0
         totais_produtos[produto][unidade] += valor
 
-  # Formata os dados para exibir na tabela e passar para o gráfico
   tabela_volume = []
   for prod, unidades in totais_produtos.items():
     resumo_partes = []
     total_principal = 0
     unidade_principal = ""
     for un, val in unidades.items():
-      # Formata bonito (sem .0 desnecessário se for inteiro)
       val_fmt = int(val) if val.is_integer() else val
       resumo_partes.append(f"{val_fmt} {un}")
       total_principal = val_fmt
@@ -617,12 +612,10 @@ def volume():
         "unidade": unidade_principal,
     })
 
-  # Ordena pelo maior volume numérico
   tabela_volume = sorted(
       tabela_volume, key=lambda x: x["total_num"], reverse=True
   )
 
-  # Prepara dados para o gráfico (Top 10 produtos)
   top_10 = tabela_volume[:10]
   labels_grafico = [item["produto"] for item in top_10]
   valores_grafico = [item["total_num"] for item in top_10]
@@ -682,7 +675,6 @@ def volume():
             </form>
 
             {% if tabela_volume %}
-                <!-- Gráfico Visual -->
                 <div class="chart-container">
                     <canvas id="graficoVolume"></canvas>
                 </div>
@@ -763,10 +755,10 @@ def receber_mensagem():
   try:
     dados = request.get_json(silent=True)
     if not dados:
-      return jsonify({"status": "erro", "detalhe": "JSON inválido"}}, 200
+      return jsonify({"status": "erro", "detalhe": "JSON inválido"}), 200
     remetente = str(dados.get("telefone", ""))
     if NUMERO_AUTORIZADO not in remetente:
-      return jsonify({"status": "ignorado"}}, 200
+      return jsonify({"status": "ignorado"}), 200
     texto = dados.get("mensagem", "")
     sucesso, msg_retorno = interpretar_e_gerar_pedido(texto, remetente)
     if sucesso:
