@@ -1,19 +1,19 @@
 from datetime import datetime
-from fpdf import FPDF
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import json
 import os
 import re
+import smtplib
 import tempfile
 import threading
-import requests  # Importado para enviar os dados para o Make
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
 ARQUIVO_HISTORICO = "historico_pedidos.json"
-
-# Cole aqui a URL do Webhook do Make (vamos configurar no passo 2)
-WEBHOOK_MAKE_URL = os.environ.get("WEBHOOK_MAKE_URL", "")
 
 # Número de telefone autorizado
 NUMERO_AUTORIZADO = "3598464384"
@@ -254,26 +254,68 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
     fill_toggle = not fill_toggle
 
   tmp_dir = tempfile.gettempdir()
-  pdf_path = os.path.join(tmp_dir, f"pedido_whatsapp.pdf")
+  pdf_path = os.path.join(
+      tmp_dir, f"pedido_{codigo_pedido.replace('/', '_').replace('#', '')}.pdf"
+  )
   pdf.output(pdf_path)
 
-  # Dispara os dados para o Make em background
-  threading.Thread(target=enviar_para_make, args=(novo_pedido,)).start()
+  # Dispara o e-mail automático em background junto com o Make (opcional)
+  threading.Thread(
+      target=enviar_email_automatico, args=(pdf_path, codigo_pedido, nome_cliente)
+  ).start()
 
   return True, codigo_pedido
 
 
-def enviar_para_make(dados_pedido):
-  url = os.environ.get("WEBHOOK_MAKE_URL")
-  if not url:
-    print("[AVISO] WEBHOOK_MAKE_URL não configurada no Render.")
+def enviar_email_automatico(pdf_path, codigo_pedido, cliente_nome):
+  smtp_server = "smtp.gmail.com"
+  smtp_port = 587
+
+  # Puxa o e-mail e a senha de app de forma segura pelas variáveis de ambiente do Render
+  remetente = os.environ.get("EMAIL_REMETENTE", "")
+  senha_app = os.environ.get("EMAIL_SENHA", "")
+
+  if not remetente or not senha_app:
+    print(
+        "[AVISO] EMAIL_REMETENTE ou EMAIL_SENHA não configurados. E-mail não"
+        " enviado pelo Python."
+    )
     return
 
+  destinatarios = ["andreiabolzanmenezes@gmail.com", "beneditobandola@gmail.com"]
+
   try:
-    response = requests.post(url, json=dados_pedido, timeout=10)
-    print(f"[MAKE] Resposta do disparo para o Make: {response.status_code}")
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.starttls()
+    server.login(remetente, senha_app)
+
+    for destinatario in destinatarios:
+      msg = MIMEMultipart()
+      msg["From"] = remetente
+      msg["To"] = destinatario
+      msg["Subject"] = f"🛒 Pedido WhatsApp {codigo_pedido} - Banca do Mané"
+
+      corpo = (
+          f"Olá!\n\nNovo pedido automatizado recebido via WhatsApp"
+          f" ({codigo_pedido}).\nO PDF de conferência está em"
+          " anexo.\n\nSistema Banca do Mané"
+      )
+      msg.attach(MIMEText(corpo, "plain"))
+
+      with open(pdf_path, "rb") as f:
+        parte = MIMEBase("application", "octet-stream")
+        parte.set_payload(f.read())
+        encoders.encode_base64(parte)
+        parte.add_header(
+            "Content-Disposition", 'filename="pedido_whatsapp.pdf"'
+        )
+        msg.attach(parte)
+
+      server.sendmail(remetente, destinatario, msg.as_string())
+    server.quit()
+    print("E-mail automático enviado com sucesso pelo Python!")
   except Exception as e:
-    print(f"[ERRO MAKE] Falha ao enviar dados para o Make: {e}")
+    print(f"Erro no envio de e-mail automático: {e}")
 
 
 @app.route("/webhook-whatsapp", methods=["POST"])
@@ -289,8 +331,7 @@ def receber_mensagem():
       )
 
     remetente = str(dados.get("telefone", ""))
-    
-    # Validação rigorosa: ignora imediatamente qualquer número que não seja o autorizado
+
     if NUMERO_AUTORIZADO not in remetente:
       return jsonify({"status": "ignorado", "motivo": "Número não autorizado"}), 200
 
