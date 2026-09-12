@@ -138,7 +138,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, "Nenhum produto identificado na mensagem."
 
   data_hoje = agora_brasilia.strftime("%d/%m/%Y")
-  data_str_iso = agora_brasilia.strftime("%Y-%m-%d")
 
   dados_existentes = []
   if os.path.exists(ARQUIVO_HISTORICO):
@@ -148,10 +147,8 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     except:
       dados_existentes = []
 
-  pedidos_hoje = [
-      p for p in dados_existentes if p.get("data_hora", "").startswith(data_str_iso)
-  ]
-  numero_sequencial = len(pedidos_hoje) + 1
+  # Numeração sequencial contínua baseada no total de pedidos salvos
+  numero_sequencial = len(dados_existentes) + 1
   codigo_pedido = f"#{numero_sequencial:02d} / {data_hoje}"
 
   texto_itens_formatado = ""
@@ -194,7 +191,6 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Painel Manual"):
     return False, str(e)
 
 
-# Rota Principal (Novo Pedido)
 @app.route("/", methods=["GET", "POST"])
 def index():
   mensagem_status = None
@@ -264,7 +260,6 @@ def index():
   )
 
 
-# Rota Dedicada para o Histórico com Accordion (Clicável)
 @app.route("/historico", methods=["GET"])
 def historico():
   historico_pedidos = []
