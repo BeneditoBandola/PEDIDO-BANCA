@@ -9,7 +9,6 @@ import os
 import re
 import smtplib
 import tempfile
-import threading
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -26,6 +25,52 @@ def limpiar_texto_pdf(texto):
   return re.sub(
       r"[^\w\s\-\(\)\.,/:;áéíóúãõâêîôûçÁÉÍÓÚÃÕÂÊÎÔÛÇ]", "", str(texto)
   ).strip()
+
+
+def enviar_email_automatico(pdf_path, codigo_pedido, cliente_nome):
+  smtp_server = "smtp.gmail.com"
+  smtp_port = 587
+
+  remetente = os.environ.get("EMAIL_REMETENTE", "")
+  senha_app = os.environ.get("EMAIL_SENHA", "")
+
+  if not remetente or not senha_app:
+    return False, "EMAIL_REMETENTE ou EMAIL_SENHA não configurados no Render."
+
+  destinatarios = ["andreiabolzanmenezes@gmail.com", "beneditobandola@gmail.com"]
+
+  try:
+    server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+    server.starttls()
+    server.login(remetente, senha_app)
+
+    for destinatario in destinatarios:
+      msg = MIMEMultipart()
+      msg["From"] = remetente
+      msg["To"] = destinatario
+      msg["Subject"] = f"🛒 Pedido WhatsApp {codigo_pedido} - Banca do Mané"
+
+      corpo = (
+          f"Olá!\n\nNovo pedido automatizado recebido via WhatsApp"
+          f" ({codigo_pedido}).\nO PDF de conferência está em"
+          " anexo.\n\nSistema Banca do Mané"
+      )
+      msg.attach(MIMEText(corpo, "plain"))
+
+      with open(pdf_path, "rb") as f:
+        parte = MIMEBase("application", "octet-stream")
+        parte.set_payload(f.read())
+        encoders.encode_base64(parte)
+        parte.add_header(
+            "Content-Disposition", 'filename="pedido_whatsapp.pdf"'
+        )
+        msg.attach(parte)
+
+      server.sendmail(remetente, destinatario, msg.as_string())
+    server.quit()
+    return True, "E-mail enviado com sucesso"
+  except Exception as e:
+    return False, str(e)
 
 
 def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
@@ -260,62 +305,14 @@ def interpretar_e_gerar_pedido(texto_wpp, nome_cliente="Cliente WhatsApp"):
   )
   pdf.output(pdf_path)
 
-  # Dispara o e-mail automático em background
-  threading.Thread(
-      target=enviar_email_automatico, args=(pdf_path, codigo_pedido, nome_cliente)
-  ).start()
+  # Envia o e-mail de forma síncrona para capturar qualquer erro na resposta
+  email_sucesso, email_msg = enviar_email_automatico(
+      pdf_path, codigo_pedido, nome_cliente
+  )
+  if not email_sucesso:
+    return False, f"Erro ao enviar e-mail: {email_msg}"
 
   return True, codigo_pedido
-
-
-def enviar_email_automatico(pdf_path, codigo_pedido, cliente_nome):
-  smtp_server = "smtp.gmail.com"
-  smtp_port = 587
-
-  remetente = os.environ.get("EMAIL_REMETENTE", "")
-  senha_app = os.environ.get("EMAIL_SENHA", "")
-
-  if not remetente or not senha_app:
-    print(
-        "[AVISO] EMAIL_REMETENTE ou EMAIL_SENHA não configurados. E-mail não"
-        " enviado pelo Python."
-    )
-    return
-
-  destinatarios = ["andreiabolzanmenezes@gmail.com", "beneditobandola@gmail.com"]
-
-  try:
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(remetente, senha_app)
-
-    for destinatario in destinatarios:
-      msg = MIMEMultipart()
-      msg["From"] = remetente
-      msg["To"] = destinatario
-      msg["Subject"] = f"🛒 Pedido WhatsApp {codigo_pedido} - Banca do Mané"
-
-      corpo = (
-          f"Olá!\n\nNovo pedido automatizado recebido via WhatsApp"
-          f" ({codigo_pedido}).\nO PDF de conferência está em"
-          " anexo.\n\nSistema Banca do Mané"
-      )
-      msg.attach(MIMEText(corpo, "plain"))
-
-      with open(pdf_path, "rb") as f:
-        parte = MIMEBase("application", "octet-stream")
-        parte.set_payload(f.read())
-        encoders.encode_base64(parte)
-        parte.add_header(
-            "Content-Disposition", 'filename="pedido_whatsapp.pdf"'
-        )
-        msg.attach(parte)
-
-      server.sendmail(remetente, destinatario, msg.as_string())
-    server.quit()
-    print("E-mail automático enviado com sucesso pelo Python!")
-  except Exception as e:
-    print(f"Erro no envio de e-mail automático: {e}")
 
 
 @app.route("/webhook-whatsapp", methods=["POST"])
